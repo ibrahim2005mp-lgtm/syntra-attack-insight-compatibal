@@ -743,6 +743,43 @@ export const DOMAIN_MATCHERS: CorpusMatch[] = [
 export { NO_RESULTS, OUT_OF_DOMAIN, reportResult, safetyResult };
 
 /**
+ * Derive a lab for a report that has none, targeting its primary (first
+ * chain) technique. Used by Full-report mode so every report carries the
+ * complete 8-section brief (07 Controlled Attack Validation + 08 Isolated
+ * Lab Environment). Standard mode leaves reports untouched.
+ */
+export function defaultLabFor(chain: AttackStage[]): LabEnvironment {
+  const stage = chain[0];
+  const techniqueId = stage?.techniqueId ?? "T0000";
+  const techniqueName = stage?.techniqueName ?? "Documented Technique";
+  return {
+    id: `LAB-${techniqueId}`,
+    techniqueId,
+    techniqueName,
+    available: true,
+    labType: "Controlled Technique Validation",
+    platform: "windows",
+    runtimeEnvironment: "Windows Virtual Machine (VM)",
+    networkMode: "Isolated Lab Network",
+    validationSource: "SYNTRA Research Lab",
+    objective: `Safely observe and validate the behavior associated with ${techniqueId} inside a controlled and isolated environment.`,
+    estimatedDuration: "10–15 Minutes",
+    difficulty: "Intermediate",
+    safetyBoundary:
+      "The lab runs in an isolated environment and is not intended for use against external or unauthorized systems.",
+    sessionSteps: [
+      { text: "Review the scenario and objective." },
+      { text: "Access the Windows VM and open the required tools." },
+      { text: "Execute the provided commands or script in the lab environment." },
+      { text: `Observe the expected ${techniqueId} behavior (processes, logs, artifacts).` },
+      { text: "Collect evidence and compare with the expected results." },
+      { text: "Complete the lab and view the validation result." },
+    ],
+    scenarioObjective: `Safely observe and validate the behavior associated with ${techniqueId} inside an isolated Windows virtual machine.`,
+  };
+}
+
+/**
  * Generic full report for Full-report mode: when a cybersecurity question has
  * no specific corpus entry, the documented phishing-technique brief is the
  * closest evidence-grounded coverage, so it is returned instead of an empty

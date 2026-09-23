@@ -16,6 +16,7 @@
  *  - "slow"            → multi-second latency (loading state demo)
  */
 import {
+  defaultLabFor,
   DOMAIN_MATCHERS,
   genericFullReport,
   NO_RESULTS,
@@ -69,21 +70,30 @@ function simulatedLatency(question: string): number {
  *
  * `fullReportMode` (the composer's "Full report" toggle): when on, a
  * cybersecurity question without a specific corpus entry returns the
- * documented generic full report instead of NO_RESULTS. Safety refusals and
- * off-domain questions are unaffected — a report would be dishonest there.
+ * documented generic full report instead of NO_RESULTS, and every report is
+ * completed with a derived lab so all 8 sections render. Safety refusals
+ * and off-domain questions are unaffected — a report would be dishonest
+ * there.
  */
 function resolveResult(question: string, fullReportMode: boolean): InvestigationResult {
+  const complete = (result: InvestigationResult): InvestigationResult => {
+    const policyResult = enforceFullReportPolicy(result);
+    if (fullReportMode && policyResult.kind === "report" && !policyResult.lab) {
+      return { ...policyResult, lab: defaultLabFor(policyResult.attackChain) };
+    }
+    return policyResult;
+  };
   for (const matcher of SAFETY_MATCHERS) {
-    if (matcher.question.test(question)) return enforceFullReportPolicy(matcher.build());
+    if (matcher.question.test(question)) return complete(matcher.build());
   }
   for (const matcher of DOMAIN_MATCHERS) {
-    if (matcher.question.test(question)) return enforceFullReportPolicy(matcher.build());
+    if (matcher.question.test(question)) return complete(matcher.build());
   }
   const cyberRelated = /\b(cyber|attack|malware|vulnerab|exploit|threat|actor|technique|mitre|cve|breach)\b/i.test(
     question,
   );
   if (fullReportMode && cyberRelated) {
-    return enforceFullReportPolicy(genericFullReport());
+    return complete(genericFullReport());
   }
   if (cyberRelated) {
     return NO_RESULTS;
