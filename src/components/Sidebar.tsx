@@ -1,31 +1,53 @@
 import {
   Activity,
+  Archive,
   ChevronLeft,
   CircleUserRound,
   History,
   Info,
   Menu,
+  Pencil,
+  Pin,
+  PinOff,
   Radar,
   Share,
   ShieldCheck,
+  Trash2,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { validateInvestigationTitle } from "@/security/inputValidation";
 import {
   readHistory,
   subscribeToConversationStore,
+  renameThread,
+  setThreadPinned,
+  setThreadArchived,
+  deleteThread,
 } from "@/hooks/conversationStore";
 import type { HistoryItem } from "@/types/investigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { SyntraLogo, SyntraMark } from "./Logo";
 
 export type SyntraView = "investigate" | "history" | "about";
@@ -49,7 +71,7 @@ const STORAGE_KEY = "syntra.sidebar.collapsed";
 const RECENT_LIMIT = 12;
 
 /**
- * One row in the Recent list: title + share action. Conversations live for
+ * One row in the Recent list: title + actions menu. Conversations live for
  * the browser session; clicking a row restores it in the workspace.
  */
 function RecentItem({
@@ -62,6 +84,9 @@ function RecentItem({
   onOpen: (id: string) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const handleShare = () => {
     const url = `${window.location.origin}/investigate?id=${encodeURIComponent(item.threadId)}`;
@@ -77,20 +102,85 @@ function RecentItem({
       });
   };
 
+  const startRename = () => {
+    setDraftTitle(item.question);
+    setRenaming(true);
+  };
+
+  const commitRename = () => {
+    const check = validateInvestigationTitle(draftTitle);
+    if (!check.valid) {
+      toast.error(check.error === "too_long" ? "Title is too long" : "Title is not valid", {
+        description:
+          check.error === "empty"
+            ? "Enter a name for this conversation."
+            : "Titles must be 120 characters or fewer with no control characters.",
+      });
+      return;
+    }
+    if (!check.valid || check.value === undefined) return;
+    if (check.value !== item.question && renameThread(item.threadId, check.value)) {
+      toast.success("Conversation renamed");
+    }
+    setRenaming(false);
+  };
+
+  const handleDelete = () => {
+    setConfirmingDelete(false);
+    if (deleteThread(item.threadId)) {
+      toast.success("Conversation deleted");
+      // If this conversation is open in the workspace, the Investigate page
+      // listens for this and resets itself.
+      window.dispatchEvent(
+        new CustomEvent("syntra:thread-deleted", { detail: item.threadId }),
+      );
+    }
+  };
+
   return (
     <div
-      className={cn("syn-recent-item group", active && "active")}
+      className={cn("syn-recent-item group", active && "active", item.archived && "syn-recent-item-archived")}
       data-menu-open={menuOpen ? "true" : undefined}
+      data-renaming={renaming ? "true" : undefined}
       aria-current={active ? "true" : undefined}
     >
-      <button
-        type="button"
-        className="flex min-w-0 flex-1 items-center gap-2 text-left"
-        title={item.question}
-        onClick={() => onOpen(item.id)}
-      >
-        <span className="syn-recent-title">{item.question}</span>
-      </button>
+      {renaming ? (
+        <form
+          className="flex min-w-0 flex-1 items-center"
+          onSubmit={(e) => {
+            e.preventDefault();
+            commitRename();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setRenaming(false);
+          }}
+        >
+          <input
+            autoFocus
+            value={draftTitle}
+            onChange={(e) => setDraftTitle(e.target.value)}
+            onBlur={commitRename}
+            maxLength={120}
+            aria-label="Conversation name"
+            className="w-full rounded-sm border border-primary/50 bg-background px-1.5 py-1 text-xs text-foreground outline-none"
+          />
+        </form>
+      ) : (
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          title={item.question}
+          onClick={() => onOpen(item.id)}
+        >
+          {item.pinned && <Pin className="size-3 shrink-0 fill-current text-primary" />}
+          <span className="syn-recent-title">{item.question}</span>
+          {item.archived && (
+            <span className="syn-mono ml-auto shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
+              Archived
+            </span>
+          )}
+        </button>
+      )}
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <button
@@ -106,8 +196,65 @@ function RecentItem({
             <Share className="size-4" />
             Share
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={startRename}>
+            <Pencil className="size-4" />
+            Rename
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => {
+              setThreadPinned(item.threadId, !item.pinned);
+              toast.success(item.pinned ? "Unpinned" : "Pinned to top");
+            }}
+          >
+            {item.pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
+            {item.pinned ? "Unpin chat" : "Pin chat"}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              setThreadArchived(item.threadId, !item.archived);
+              toast.success(item.archived ? "Conversation unarchived" : "Conversation archived");
+            }}
+          >
+            <Archive className="size-4" />
+            {item.archived ? "Unarchive" : "Archive"}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={() => setConfirmingDelete(true)}
+          >
+            <Trash2 className="size-4" />
+            Delete
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      {confirmingDelete &&
+        createPortal(
+          <AlertDialog open onOpenChange={(open) => !open && setConfirmingDelete(false)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this conversation?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This permanently removes the conversation and all of its turns from this
+                  session. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setConfirmingDelete(false)}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-white hover:bg-destructive/90"
+                  onClick={handleDelete}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>,
+          document.body,
+        )}
     </div>
   );
 }

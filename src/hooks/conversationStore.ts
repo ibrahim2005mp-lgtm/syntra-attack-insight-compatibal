@@ -96,7 +96,11 @@ export function readThread(threadId: string): Thread | null {
   };
 }
 
-/** Sidebar/history list: one entry per thread, represented by its newest turn. */
+/**
+ * Sidebar/history list: one entry per thread, represented by its newest turn.
+ * Archived entries are included but flagged, so the UI can dim them and offer
+ * an unarchive action instead of making them unreachable.
+ */
 export function readHistory(): HistoryItem[] {
   const threads = new Map<string, { item: Investigation; turnCount: number }>();
   for (const item of store) {
@@ -109,7 +113,13 @@ export function readHistory(): HistoryItem[] {
     threads.set(key, { item, turnCount: 1 });
   }
   return [...threads.values()]
-    .sort((a, b) => b.item.createdAt - a.item.createdAt)
+    .sort((a, b) => {
+      // Pinned conversations sort first, then newest.
+      const pa = a.item.pinned === true ? 1 : 0;
+      const pb = b.item.pinned === true ? 1 : 0;
+      if (pa !== pb) return pb - pa;
+      return b.item.createdAt - a.item.createdAt;
+    })
     .map(({ item, turnCount }) => ({
       id: item.id,
       threadId: item.threadId,
@@ -122,6 +132,8 @@ export function readHistory(): HistoryItem[] {
             ? ("insufficient" as const)
             : ("unverified" as const),
       turnCount,
+      pinned: item.pinned === true,
+      archived: item.archived === true,
     }));
 }
 
@@ -181,5 +193,53 @@ export async function runInvestigation(
   lastThreadId = investigation.threadId;
   notifyChanged();
   return investigation;
+}
+
+/* --------------------------- thread mutations --------------------------- */
+
+/** Apply a mutation to every turn of a thread; returns false when not found. */
+function mutateThread(threadId: string, mutate: (item: Investigation) => void): boolean {
+  const root = store.find((item) => item.id === threadId || item.threadId === threadId);
+  if (!root) return false;
+  const rootId = root.threadId;
+  for (const item of store) {
+    if (item.threadId === rootId) mutate(item);
+  }
+  notifyChanged();
+  return true;
+}
+
+/** Rename a conversation thread (all turns share the title). */
+export function renameThread(threadId: string, title: string): boolean {
+  return mutateThread(threadId, (item) => {
+    item.title = title;
+  });
+}
+
+/** Pin / unpin a conversation; pinned threads sort first in lists. */
+export function setThreadPinned(threadId: string, pinned: boolean): boolean {
+  return mutateThread(threadId, (item) => {
+    item.pinned = pinned || undefined;
+  });
+}
+
+/** Archive a conversation; archived threads are hidden from the Recent list. */
+export function setThreadArchived(threadId: string, archived: boolean): boolean {
+  return mutateThread(threadId, (item) => {
+    item.archived = archived || undefined;
+  });
+}
+
+/** Delete a conversation and every turn in it. */
+export function deleteThread(threadId: string): boolean {
+  const root = store.find((item) => item.id === threadId || item.threadId === threadId);
+  if (!root) return false;
+  const rootId = root.threadId;
+  for (let i = store.length - 1; i >= 0; i -= 1) {
+    if (store[i].threadId === rootId) store.splice(i, 1);
+  }
+  if (lastThreadId === rootId) lastThreadId = null;
+  notifyChanged();
+  return true;
 }
 

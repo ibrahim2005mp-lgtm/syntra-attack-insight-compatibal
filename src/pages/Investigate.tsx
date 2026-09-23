@@ -94,6 +94,19 @@ export default function Investigate({ locationState }: InvestigateProps) {
     };
   }, [activeThreadId]);
 
+  // If the conversation currently open is deleted from the sidebar, reset
+  // the workspace to the empty state.
+  useEffect(() => {
+    const onThreadDeleted = (event: Event) => {
+      const deletedId = (event as CustomEvent<string>).detail;
+      if (deletedId && deletedId === thread?.threadId) {
+        reset();
+      }
+    };
+    window.addEventListener("syntra:thread-deleted", onThreadDeleted);
+    return () => window.removeEventListener("syntra:thread-deleted", onThreadDeleted);
+  }, [thread?.threadId, reset]);
+
   // The composer continues the open conversation.
   const activeThreadIdForAsk = thread?.threadId;
   const handleAsk = useCallback(

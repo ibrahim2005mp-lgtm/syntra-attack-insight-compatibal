@@ -67,6 +67,11 @@ export default function HistoryPage() {
                 <span className="syn-mono shrink-0 text-[11px] text-muted-foreground">
                   {formatTimestamp(item.createdAt)}
                 </span>
+                {item.archived && (
+                  <span className="syn-mono shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Archived
+                  </span>
+                )}
                 <StatusBadge status={item.evidenceStatus} />
               </button>
             </li>

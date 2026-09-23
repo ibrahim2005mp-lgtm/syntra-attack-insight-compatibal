@@ -212,6 +212,8 @@ export interface HistoryItem {
   turnCount: number;
   /** True when the user pinned this conversation. */
   pinned?: boolean;
+  /** True when the user archived this conversation. */
+  archived?: boolean;
 }
 
 export const EVIDENCE_STATUS_LABEL: Record<EvidenceStatus, string> = {

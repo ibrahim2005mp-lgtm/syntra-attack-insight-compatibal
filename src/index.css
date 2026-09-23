@@ -357,6 +357,12 @@
     color: var(--foreground);
     background: var(--syntra-orange-soft);
   }
+  .syn-recent-item-archived {
+    opacity: 0.55;
+  }
+  .syn-recent-item-archived:hover {
+    opacity: 1;
+  }
   .syn-recent-item.active .syn-recent-dot {
     color: var(--syntra-orange);
   }
