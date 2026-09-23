@@ -17,6 +17,7 @@
  */
 import {
   DOMAIN_MATCHERS,
+  genericFullReport,
   NO_RESULTS,
   OUT_OF_DOMAIN,
   SAFETY_MATCHERS,
@@ -65,15 +66,26 @@ function simulatedLatency(question: string): number {
  * Resolve a question against the demo corpus. Every resolved result passes
  * through the full-report validation policy before it is stored, so a
  * malformed report can never reach the render layer.
+ *
+ * `fullReportMode` (the composer's "Full report" toggle): when on, a
+ * cybersecurity question without a specific corpus entry returns the
+ * documented generic full report instead of NO_RESULTS. Safety refusals and
+ * off-domain questions are unaffected — a report would be dishonest there.
  */
-function resolveResult(question: string): InvestigationResult {
+function resolveResult(question: string, fullReportMode: boolean): InvestigationResult {
   for (const matcher of SAFETY_MATCHERS) {
     if (matcher.question.test(question)) return enforceFullReportPolicy(matcher.build());
   }
   for (const matcher of DOMAIN_MATCHERS) {
     if (matcher.question.test(question)) return enforceFullReportPolicy(matcher.build());
   }
-  if (/\b(cyber|attack|malware|vulnerab|exploit|threat|actor|technique|mitre|cve|breach)\b/i.test(question)) {
+  const cyberRelated = /\b(cyber|attack|malware|vulnerab|exploit|threat|actor|technique|mitre|cve|breach)\b/i.test(
+    question,
+  );
+  if (fullReportMode && cyberRelated) {
+    return enforceFullReportPolicy(genericFullReport());
+  }
+  if (cyberRelated) {
     return NO_RESULTS;
   }
   return OUT_OF_DOMAIN;
@@ -166,6 +178,7 @@ async function runWithLatency(question: string): Promise<void> {
 export async function runInvestigation(
   question: string,
   threadId?: string,
+  fullReportMode = true,
 ): Promise<Investigation> {
   await runWithLatency(question);
 
@@ -190,7 +203,7 @@ export async function runInvestigation(
     threadId: resolvedThreadId || id,
     question,
     createdAt: Date.now(),
-    result: resolveResult(question),
+    result: resolveResult(question, fullReportMode),
   };
 
   store.unshift(investigation);

@@ -47,6 +47,9 @@ export default function Investigate({ locationState }: InvestigateProps) {
     cancel,
   } = useInvestigation();
   const [draft, setDraft] = useState<string | undefined>(undefined);
+  // Full-report mode: every question returns the complete evidence-grounded
+  // brief (the composer toggle). On by default.
+  const [fullReportMode, setFullReportMode] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   // Auto-resume runs at most once per mount so it never interrupts an
   // active exchange.
@@ -112,9 +115,9 @@ export default function Investigate({ locationState }: InvestigateProps) {
   const handleAsk = useCallback(
     (question: string) => {
       setDraft(undefined);
-      void ask(question, activeThreadIdForAsk);
+      void ask(question, activeThreadIdForAsk, fullReportMode);
     },
-    [ask, activeThreadIdForAsk],
+    [ask, activeThreadIdForAsk, fullReportMode],
   );
 
   const handleNewConversation = useCallback(() => {
@@ -155,7 +158,13 @@ export default function Investigate({ locationState }: InvestigateProps) {
             </p>
           </div>
           <div className="w-full">
-            <InvestigationInput onSubmit={handleAsk} pending={pending} draft={draft} />
+            <InvestigationInput
+              onSubmit={handleAsk}
+              pending={pending}
+              draft={draft}
+              fullReportMode={fullReportMode}
+              onToggleFullReport={() => setFullReportMode((prev) => !prev)}
+            />
           </div>
         </div>
       )}
@@ -191,6 +200,8 @@ export default function Investigate({ locationState }: InvestigateProps) {
               onSubmit={handleAsk}
               pending={pending}
               draft={draft}
+              fullReportMode={fullReportMode}
+              onToggleFullReport={() => setFullReportMode((prev) => !prev)}
             />
             {turns.length > 0 && !pending && (
               <p className="mt-2 text-center text-[10px] text-muted-foreground">

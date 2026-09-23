@@ -104,10 +104,11 @@ export function useInvestigation() {
 
   /**
    * Ask a question. When `threadId` is provided the exchange is appended to
-   * that conversation; otherwise it opens a new one.
+   * that conversation; otherwise it opens a new one. `fullReportMode` is the
+   * composer's Full-report toggle (default on).
    */
   const ask = useCallback(
-    async (question: string, threadId?: string) => {
+    async (question: string, threadId?: string, fullReportMode = true) => {
       const runId = ++runIdRef.current;
       const validation = validateInvestigationQuestion(question);
       if (!validation.valid) {
@@ -139,7 +140,7 @@ export function useInvestigation() {
       });
 
       try {
-        const turn = await runInvestigation(question, threadId);
+        const turn = await runInvestigation(question, threadId, fullReportMode);
         if (runIdRef.current !== runId) return;
         await refreshThread(turn.threadId, runId, true);
       } catch (error) {
@@ -164,9 +165,12 @@ export function useInvestigation() {
   /** Retry the last failed question in its original conversation. */
   const pendingRetryQuestion = state.pendingQuestion;
   const pendingRetryThreadId = state.errorTurnThreadId;
-  const retry = useCallback(() => {
-    if (pendingRetryQuestion) void ask(pendingRetryQuestion, pendingRetryThreadId ?? undefined);
-  }, [ask, pendingRetryQuestion, pendingRetryThreadId]);
+  const retry = useCallback(
+    (fullReportMode = true) => {
+      if (pendingRetryQuestion) void ask(pendingRetryQuestion, pendingRetryThreadId ?? undefined, fullReportMode);
+    },
+    [ask, pendingRetryQuestion, pendingRetryThreadId],
+  );
 
   /**
    * Open a stored conversation (sidebar / history / share link). With

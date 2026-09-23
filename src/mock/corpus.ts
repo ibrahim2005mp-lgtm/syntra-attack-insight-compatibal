@@ -741,3 +741,15 @@ export const DOMAIN_MATCHERS: CorpusMatch[] = [
 ];
 
 export { NO_RESULTS, OUT_OF_DOMAIN, reportResult, safetyResult };
+
+/**
+ * Generic full report for Full-report mode: when a cybersecurity question has
+ * no specific corpus entry, the documented phishing-technique brief is the
+ * closest evidence-grounded coverage, so it is returned instead of an empty
+ * state. (Off-domain questions still return out_of_domain — a report would
+ * be dishonest there.)
+ */
+export function genericFullReport(): InvestigationResult {
+  const t1566 = DOMAIN_MATCHERS.find((m) => m.question.test("what is the phishing technique T1566"));
+  return t1566 ? t1566.build() : NO_RESULTS;
+}
