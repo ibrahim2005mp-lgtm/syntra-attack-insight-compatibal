@@ -3,6 +3,7 @@ import {
   Archive,
   ChevronLeft,
   CircleUserRound,
+  Ellipsis,
   History,
   Info,
   Menu,
@@ -188,7 +189,7 @@ function RecentItem({
             className="flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
             aria-label={`Actions for ${item.question}`}
           >
-            <Share className="size-3.5" />
+            <Ellipsis className="size-3.5" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="start" className="min-w-44">
