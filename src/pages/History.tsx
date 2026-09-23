@@ -2,7 +2,10 @@ import { History as HistoryIcon, Radar } from "lucide-react";
 import { useEffect, useState } from "react";
 import { WorkspacePage } from "@/components/WorkspacePage";
 import { StatusBadge } from "@/components/StatusBadge";
-import { getHistory } from "@/services/api";
+import {
+  readHistory,
+  subscribeToConversationStore,
+} from "@/hooks/conversationStore";
 import type { HistoryItem } from "@/types/investigation";
 
 function formatTimestamp(ms: number): string {
@@ -21,19 +24,16 @@ function formatTimestamp(ms: number): string {
 
 /**
  * Minimal history: question, timestamp, evidence status. Selecting an item
- * restores the investigation in the workspace. No admin dashboard.
+ * restores the investigation in the workspace. Entries live for the browser
+ * session (in-memory store) and refresh on every store change.
  */
 export default function HistoryPage() {
-  const [items, setItems] = useState<HistoryItem[] | null>(null);
+  // In-memory store is synchronous, so state initializes from it directly;
+  // the effect only subscribes to later changes.
+  const [items, setItems] = useState<HistoryItem[] | null>(() => readHistory());
 
   useEffect(() => {
-    let cancelled = false;
-    getHistory().then((rows) => {
-      if (!cancelled) setItems(rows);
-    });
-    return () => {
-      cancelled = true;
-    };
+    return subscribeToConversationStore(() => setItems(readHistory()));
   }, []);
 
   const handleRestore = (id: string) => {
@@ -49,8 +49,8 @@ export default function HistoryPage() {
           <HistoryIcon className="size-6 text-muted-foreground" aria-hidden="true" />
           <p className="text-sm font-medium text-foreground">No investigations yet</p>
           <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
-            Run your first investigation to build history. Every investigation is stored
-            with its evidence status so you can return to it later.
+            Run your first investigation to build history. Conversations you start
+            appear here for the current session so you can return to them later.
           </p>
         </div>
       ) : (
@@ -59,7 +59,7 @@ export default function HistoryPage() {
             <li key={item.id}>
               <button
                 type="button"
-                onClick={() => handleRestore(item.id)}
+                onClick={() => handleRestore(item.threadId)}
                 className="syn-card syn-card-interactive flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 p-3.5 text-left"
               >
                 <Radar className="size-4 shrink-0 text-[var(--syntra-orange)]" aria-hidden="true" />

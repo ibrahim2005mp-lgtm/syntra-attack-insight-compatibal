@@ -1,40 +1,29 @@
 import {
   Activity,
-  Archive,
   ChevronLeft,
   CircleUserRound,
-  FlaskConical,
   History,
   Info,
   Menu,
-  MoreHorizontal,
-  Pencil,
-  Pin,
-  PinOff,
   Radar,
   Share,
   ShieldCheck,
-  Trash2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  deleteThread,
-  getHistory,
-  renameThread,
-  setThreadArchived,
-  setThreadPinned,
-} from "@/services/api";
+  readHistory,
+  subscribeToConversationStore,
+} from "@/hooks/conversationStore";
 import type { HistoryItem } from "@/types/investigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SyntraLogo, SyntraMark } from "./Logo";
@@ -47,10 +36,6 @@ interface SidebarProps {
   /** Mobile drawer visibility. */
   open: boolean;
   onClose: () => void;
-  /** Current fake-API mode (drives the testing toggle). */
-  fakeApi: boolean;
-  /** Toggle fake-API mode (fires a toast, page reloads are not needed). */
-  onToggleFakeApi: (enabled: boolean) => void;
   apiOnline: boolean;
   /** Restore a stored conversation by any of its turn ids (Recent click). */
   onRestoreInvestigation: (id: string) => void;
@@ -64,95 +49,19 @@ const STORAGE_KEY = "syntra.sidebar.collapsed";
 const RECENT_LIMIT = 12;
 
 /**
- * One row in the Recent list: title + pin indicator + overflow menu
- * (Share, Rename, Pin, Archive, Delete — the pattern from modern chat UIs,
- * restyled for SYNTRA).
+ * One row in the Recent list: title + share action. Conversations live for
+ * the browser session; clicking a row restores it in the workspace.
  */
 function RecentItem({
   item,
   active,
   onOpen,
-  onChanged,
 }: {
   item: HistoryItem;
   active: boolean;
   onOpen: (id: string) => void;
-  /** Called after any successful mutation so the list refetches. */
-  onChanged: () => void;
 }) {
-  const [renaming, setRenaming] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const renameInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (renaming) renameInputRef.current?.select();
-  }, [renaming]);
-
-  const handleRename = () => {
-    const input = renameInputRef.current;
-    const value = input?.value ?? "";
-    if (input) input.value = ""; // clear for next time
-    setRenaming(false);
-    if (value.trim().length === 0 || value === item.question) return;
-    renameThread(item.threadId, value)
-      .then(() => {
-        toast.success("Title updated", { description: "The conversation was renamed." });
-        onChanged();
-      })
-      .catch((error: unknown) => {
-        toast.error("Rename failed", {
-          description: error instanceof Error ? error.message : "Please try again.",
-        });
-      });
-  };
-
-  const handlePin = () => {
-    const next = !item.pinned;
-    setThreadPinned(item.threadId, next)
-      .then(() => {
-        toast(next ? "Pinned" : "Unpinned", {
-          description: next
-            ? "This conversation now sorts to the top of Recent."
-            : "This conversation returned to its normal position.",
-        });
-        onChanged();
-      })
-      .catch((error: unknown) => {
-        toast.error("Could not update pin", {
-          description: error instanceof Error ? error.message : "Please try again.",
-        });
-      });
-  };
-
-  const handleArchive = () => {
-    setThreadArchived(item.threadId, true)
-      .then(() => {
-        toast("Conversation archived", {
-          description: "It was removed from the Recent list. Find it again in History."
-        });
-        onChanged();
-      })
-      .catch((error: unknown) => {
-        toast.error("Could not archive", {
-          description: error instanceof Error ? error.message : "Please try again.",
-        });
-      });
-  };
-
-  const handleDelete = () => {
-    deleteThread(item.threadId)
-      .then(() => {
-        toast.success("Conversation deleted", {
-          description: "The conversation and all of its exchanges were removed.",
-        });
-        onChanged();
-      })
-      .catch((error: unknown) => {
-        toast.error("Could not delete", {
-          description: error instanceof Error ? error.message : "Please try again.",
-        });
-      });
-  };
 
   const handleShare = () => {
     const url = `${window.location.origin}/investigate?id=${encodeURIComponent(item.threadId)}`;
@@ -160,34 +69,13 @@ function RecentItem({
       ?.writeText(url)
       .then(() => {
         toast.success("Link copied", {
-          description: "Anyone with this link and access can open the investigation.",
+          description: "Anyone with this link can open the investigation in this session.",
         });
       })
       .catch(() => {
         toast.error("Copy failed", { description: "Clipboard access was denied." });
       });
   };
-
-  if (renaming) {
-    return (
-      <div className="syn-recent-item active" data-renaming="true">
-        <Pin className="syn-recent-dot size-3 shrink-0" aria-hidden="true" />
-        <input
-          ref={renameInputRef}
-          type="text"
-          defaultValue={item.question}
-          maxLength={120}
-          className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[0.8125rem] text-foreground outline-none"
-          aria-label="Investigation title"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleRename();
-            if (e.key === "Escape") setRenaming(false);
-          }}
-          onBlur={handleRename}
-        />
-      </div>
-    );
-  }
 
   return (
     <div
@@ -201,13 +89,6 @@ function RecentItem({
         title={item.question}
         onClick={() => onOpen(item.id)}
       >
-        <Pin
-          className={cn(
-            "syn-recent-dot size-3 shrink-0",
-            item.pinned && "rotate-45 text-[var(--syntra-orange)]",
-          )}
-          aria-hidden="true"
-        />
         <span className="syn-recent-title">{item.question}</span>
       </button>
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
@@ -217,34 +98,13 @@ function RecentItem({
             className="flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
             aria-label={`Actions for ${item.question}`}
           >
-            <MoreHorizontal className="size-3.5" />
+            <Share className="size-3.5" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="start" className="min-w-44">
           <DropdownMenuItem onClick={handleShare}>
             <Share className="size-4" />
             Share
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setRenaming(true)}>
-            <Pencil className="size-4" />
-            Rename
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handlePin}>
-            {item.pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
-            {item.pinned ? "Unpin" : "Pin"}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleArchive}>
-            <Archive className="size-4" />
-            Archive
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={handleDelete}
-            className="text-[var(--syntra-danger)] focus:text-[var(--syntra-danger)]"
-          >
-            <Trash2 className="size-4" />
-            Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -257,8 +117,6 @@ function SidebarContent({
   active,
   onNavigate,
   collapsed,
-  fakeApi,
-  onToggleFakeApi,
   apiOnline,
   onToggleCollapse,
   onNavigateAway,
@@ -268,8 +126,6 @@ function SidebarContent({
   active: SyntraView;
   onNavigate: (view: SyntraView) => void;
   collapsed: boolean;
-  fakeApi: boolean;
-  onToggleFakeApi: (enabled: boolean) => void;
   apiOnline: boolean;
   onToggleCollapse?: () => void;
   onNavigateAway: () => void;
@@ -278,27 +134,13 @@ function SidebarContent({
 }) {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const [recent, setRecent] = useState<HistoryItem[] | null>(null);
-
-  // Load once, then refresh whenever a new investigation completes. The
-  // workspace dispatches `syntra:history-updated` on completion.
-  const refreshRecent = useCallback(() => {
-    let cancelled = false;
-    getHistory().then((rows) => {
-      if (!cancelled) setRecent(rows);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(refreshRecent, [refreshRecent]);
+  // In-memory store is synchronous, so state initializes from it directly;
+  // the effect only subscribes to later changes.
+  const [recent, setRecent] = useState<HistoryItem[] | null>(() => readHistory());
 
   useEffect(() => {
-    const onHistoryUpdated = () => refreshRecent();
-    window.addEventListener("syntra:history-updated", onHistoryUpdated);
-    return () => window.removeEventListener("syntra:history-updated", onHistoryUpdated);
-  }, [refreshRecent]);
+    return subscribeToConversationStore(() => setRecent(readHistory()));
+  }, []);
 
   const go = (view: SyntraView) => {
     onNavigate(view);
@@ -308,9 +150,8 @@ function SidebarContent({
   const handleSignOut = async () => {
     try {
       await signOut();
+    } finally {
       navigate("/");
-    } catch {
-      // Sign-out failures are non-actionable in the UI.
     }
   };
 
@@ -376,7 +217,7 @@ function SidebarContent({
             </div>
           ) : recent.length === 0 ? (
             <p className="px-4 pb-2 text-[11px] leading-relaxed text-muted-foreground">
-              Conversations you start appear here so you can reopen them.
+              Conversations you start appear here for this session so you can reopen them.
             </p>
           ) : (
             <div className="syn-recent-list" role="list" aria-label="Recent conversations">
@@ -389,7 +230,6 @@ function SidebarContent({
                       onRestoreInvestigation(id);
                       onNavigateAway();
                     }}
-                    onChanged={refreshRecent}
                   />
                 </div>
               ))}
@@ -408,52 +248,25 @@ function SidebarContent({
           {!collapsed && <span>Security Status</span>}
           {!collapsed && <span className="ml-auto text-[10px] tracking-wide text-[var(--syntra-success)]">OK</span>}
         </div>
-        <div className="syn-nav-item pointer-events-none" title="API Status">
-          <Activity
-            className={cn("size-4 shrink-0", apiOnline ? "text-[var(--syntra-success)]" : "text-[var(--syntra-danger)]")}
-          />
-          {!collapsed && <span>API Status</span>}
+        <div className="syn-nav-item pointer-events-none" title="Frontend Status">
+          <Activity className={cn("size-4 shrink-0", apiOnline ? "text-[var(--syntra-success)]" : "text-[var(--syntra-danger)]")} />
+          {!collapsed && <span>Frontend Status</span>}
           {!collapsed && (
             <span className={cn("ml-auto text-[10px] tracking-wide", apiOnline ? "text-[var(--syntra-success)]" : "text-[var(--syntra-danger)]")}>
               {apiOnline ? "Online" : "Offline"}
             </span>
           )}
         </div>
-        {user?.email && !collapsed && (
-          <div className="syn-nav-item pointer-events-none truncate" title={user.email}>
+        {user && !collapsed && (
+          <div className="syn-nav-item pointer-events-none" title="Session">
             <CircleUserRound className="size-4 shrink-0" />
-            <span className="truncate">{user.email}</span>
+            <span>Session</span>
           </div>
-        )}
-        {!collapsed && (
-          <button
-            type="button"
-            className="syn-nav-item w-full"
-            onClick={() => onToggleFakeApi(!fakeApi)}
-            aria-pressed={fakeApi}
-            title="Serve investigations from the in-browser fake API with simulated latency and failure triggers"
-          >
-            <FlaskConical
-              className={cn(
-                "size-4 shrink-0",
-                fakeApi ? "text-[var(--syntra-amber)]" : "text-muted-foreground",
-              )}
-            />
-            <span>Fake API</span>
-            <span
-              className={cn(
-                "ml-auto text-[10px] font-semibold tracking-wide",
-                fakeApi ? "text-[var(--syntra-amber)]" : "text-muted-foreground",
-              )}
-            >
-              {fakeApi ? "ON" : "OFF"}
-            </span>
-          </button>
         )}
         {!collapsed && (
           <button type="button" className="syn-nav-item" onClick={handleSignOut}>
             <X className="size-4 shrink-0" />
-            <span>Sign out</span>
+            <span>End session</span>
           </button>
         )}
       </div>
@@ -477,8 +290,6 @@ export function Sidebar({
   onNavigate,
   open,
   onClose,
-  fakeApi,
-  onToggleFakeApi,
   apiOnline,
   onRestoreInvestigation,
   activeThreadId,
@@ -517,8 +328,6 @@ export function Sidebar({
             active={active}
             onNavigate={onNavigate}
             collapsed={collapsed}
-            fakeApi={fakeApi}
-            onToggleFakeApi={onToggleFakeApi}
             apiOnline={apiOnline}
             onToggleCollapse={toggleCollapsed}
             onNavigateAway={() => undefined}
@@ -542,8 +351,6 @@ export function Sidebar({
               active={active}
               onNavigate={onNavigate}
               collapsed={false}
-              fakeApi={fakeApi}
-              onToggleFakeApi={onToggleFakeApi}
               apiOnline={apiOnline}
               onNavigateAway={onClose}
               onRestoreInvestigation={onRestoreInvestigation}

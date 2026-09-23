@@ -1,38 +1,53 @@
-import { useEffect } from "react";
 import { useSyncExternalStore } from "react";
-import {
-  getAuthSnapshot,
-  initAuthSession,
-  signIn as authSignIn,
-  signOut as authSignOut,
-  subscribeToAuth,
-} from "@/auth";
 
 /**
- * Auth hook — the only auth surface UI components consume.
- *
- * Backed by the pluggable auth service (src/auth): the session is resolved
- * once at startup through the active AuthBackend (local guest session by
- * default, or any registered/selected provider). Swap backends via
- * VITE_AUTH_BACKEND_ID without touching this hook or any component.
+ * Session-only guest identity. The frontend runs without any backend, so a
+ * lightweight in-memory session satisfies the protected-route guard for the
+ * life of the page. Swap this hook for a real identity provider when you
+ * reconnect a backend — the UI (RequireAuth, Auth page, Sidebar) only
+ * consumes this hook's return shape.
  */
+interface SessionUser {
+  id: string;
+}
+
+let session: SessionUser | null | undefined;
+const listeners = new Set<() => void>();
+
+function getSession(): SessionUser | null {
+  if (session === undefined) {
+    // Guest session for this page load; nothing persisted or transmitted.
+    session = { id: "guest" };
+  }
+  return session;
+}
+
+function getSnapshot(): SessionUser | null {
+  return getSession();
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
 export function useAuth() {
-  // Kick off session resolution (idempotent; resolves once per page load).
-  useEffect(() => {
-    initAuthSession();
-  }, []);
-
-  const snapshot = useSyncExternalStore(subscribeToAuth, getAuthSnapshot);
-
-  const isLoading = snapshot.status === "loading";
-  const isAuthenticated = snapshot.status === "ready" && snapshot.user !== null;
-  const user = snapshot.status === "ready" ? snapshot.user : null;
+  const user = useSyncExternalStore(subscribe, getSnapshot);
 
   return {
-    isLoading,
-    isAuthenticated,
+    isLoading: false,
+    isAuthenticated: user !== null,
     user,
-    signIn: authSignIn,
-    signOut: authSignOut,
+    /**
+     * Local session identity: accepts the Auth page's (provider, params)
+     * call shape for API parity — every provider resolves to the same
+     * in-memory guest session. Nothing is validated, stored or transmitted.
+     */
+    signIn: async (provider?: string, params?: Record<string, unknown>) => {
+      void provider;
+      void params;
+      return getSession();
+    },
+    signOut: async () => undefined,
   };
 }

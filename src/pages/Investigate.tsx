@@ -1,12 +1,12 @@
 import { MessageSquarePlus } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { InvestigationInput } from "@/components/InvestigationInput";
 import { WorkspacePage } from "@/components/WorkspacePage";
 import { NeutralBadge, StatusBadge } from "@/components/StatusBadge";
 import { ErrorState, LoadingState, NoticeState, SafetyResponse } from "@/components/results/States";
 import { InvestigationResultView } from "@/components/results/InvestigationResultView";
-import { useInvestigation, getLastThreadId } from "@/hooks/useInvestigation";
+import { useInvestigation } from "@/hooks/useInvestigation";
 import { DEMO_HEADING, DEMO_NOTE, DEMO_PROMPTS, type DemoPrompt } from "@/mock/demoPrompts";
 import type { Turn } from "@/types/investigation";
 
@@ -32,7 +32,7 @@ function formatTimestamp(ms: number): string {
  * Investigation workspace — SYNTRA's home base and conversation surface.
  * Every question asked while a conversation is open appends to that
  * conversation; a new conversation starts only from the empty screen or via
- * "New conversation".
+ * "New conversation". Conversations live for the browser session.
  */
 export default function Investigate({ locationState }: InvestigateProps) {
   const {
@@ -48,7 +48,6 @@ export default function Investigate({ locationState }: InvestigateProps) {
   } = useInvestigation();
   const [draft, setDraft] = useState<string | undefined>(undefined);
   const [searchParams, setSearchParams] = useSearchParams();
-  const autoResumedRef = useRef(false);
 
   const restoreId = locationState?.restoreId;
   const restoreNonce = locationState?.restoreNonce;
@@ -66,18 +65,8 @@ export default function Investigate({ locationState }: InvestigateProps) {
       void restore(shareId);
       // Consume the param so refresh/back behave predictably.
       setSearchParams({}, { replace: true });
-      return;
     }
-    // Fresh mount with no explicit restore request: resume the conversation
-    // the user last had open so navigating Investigate → History →
-    // Investigate continues the same chat instead of starting a new one.
-    // Runs at most once per mount so it never interrupts an active exchange.
-    const lastId = getLastThreadId();
-    if (!autoResumedRef.current && restoreId === undefined && lastId !== null) {
-      autoResumedRef.current = true;
-      void restore(lastId, { silent: true });
-    }
-  }, [shareId, restoreId, restore, setSearchParams]);
+  }, [shareId, restore, setSearchParams]);
 
   // Tell the shell which conversation is open so the sidebar can highlight
   // it; clears when the workspace resets or unmounts.
