@@ -4,7 +4,7 @@
  * This layer is a HARDENING layer only. It reduces common client-side risks
  * (XSS, dangerous URLs, malformed input). It does NOT replace backend
  * security: authentication, authorization, rate limiting and server-side
- * validation are enforced by the backend (Convex functions).
+ * validation are enforced by the backend (the active backend adapter).
  */
 
 export const SECURITY_CONFIG = {

@@ -126,7 +126,8 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
         );
         navigate(redirect);
       } catch {
-        // Convex Auth throws on invalid credentials and policy violations.
+        // Auth backends throw on invalid credentials and policy violations;
+        // a backend may surface its own user-safe message first.
         throw new Error(
           passwordMode === "signUp"
             ? "Could not create the account — the email may already be registered."

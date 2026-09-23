@@ -1,9 +1,9 @@
 /**
  * API mode selection.
  *
- * "real"  → requests go to the Convex backend (default).
- * "fake"  → requests are served by the in-browser fake API with simulated
- *           latency, history and failure cases, for frontend testing.
+ * "real" → requests go to the configured backend adapter (default).
+ * "fake" → requests are forced through the in-browser demo backend with
+ *          simulated latency, history and failure cases, for testing.
  *
  * The flag is a non-sensitive UI preference, so localStorage use here is
  * acceptable under the security layer's storage rules.

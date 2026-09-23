@@ -42,7 +42,7 @@ export function SyntraApp({ view }: { view: SyntraView }) {
     toast(enabled ? "Fake API enabled" : "Live backend enabled", {
       description: enabled
         ? "Investigations are served in-browser with simulated latency. Type “fail” in a question to test the error state."
-        : "Investigations are sent to the Convex backend again.",
+        : "Investigations are sent to the configured backend again.",
     });
   }, []);
 

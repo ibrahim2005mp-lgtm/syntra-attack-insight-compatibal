@@ -1,7 +1,7 @@
 /**
  * Fake API — an in-browser test double for frontend testing.
  *
- * Serves the exact response contract of the Convex backend (and is sanitized
+ * Serves the exact response contract of a real backend (and is sanitized
  * through the same pipeline), but adds:
  *  - simulated network latency (so loading states are observable)
  *  - deterministic failure triggers for error-state testing

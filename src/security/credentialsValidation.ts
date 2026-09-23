@@ -2,7 +2,7 @@
  * Credential validation — frontend hardening layer.
  *
  * Client-side checks give fast, user-friendly feedback before a network
- * round trip. They are convenience checks only: the backend (Convex Auth
+ * round trip. They are convenience checks only: the backend (the active
  * `Password` provider) re-validates the password policy and hashes the
  * secret server-side with Scrypt; the frontend never sees or stores it.
  */

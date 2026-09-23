@@ -3,7 +3,7 @@
  *
  * This data simulates what a backend RAG pipeline over MITRE ATT&CK, CAPEC,
  * CVE/CWE and CTI reporting would return. It lives behind the backend
- * boundary (it is only ever read by Convex functions), so the frontend has a
+ * boundary (it is only ever read by backend functions), so the frontend has a
  * single, swappable API surface.
  *
  * Do NOT import this module from UI components.
