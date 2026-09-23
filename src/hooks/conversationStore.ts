@@ -21,6 +21,7 @@ import {
   OUT_OF_DOMAIN,
   SAFETY_MATCHERS,
 } from "@/mock/corpus";
+import { enforceFullReportPolicy } from "@/security/reportValidation";
 import type {
   HistoryItem,
   Investigation,
@@ -60,13 +61,17 @@ function simulatedLatency(question: string): number {
   return 850 + Math.floor(Math.random() * 500);
 }
 
-/** Resolve a question against the demo corpus. */
+/**
+ * Resolve a question against the demo corpus. Every resolved result passes
+ * through the full-report validation policy before it is stored, so a
+ * malformed report can never reach the render layer.
+ */
 function resolveResult(question: string): InvestigationResult {
   for (const matcher of SAFETY_MATCHERS) {
-    if (matcher.question.test(question)) return matcher.build();
+    if (matcher.question.test(question)) return enforceFullReportPolicy(matcher.build());
   }
   for (const matcher of DOMAIN_MATCHERS) {
-    if (matcher.question.test(question)) return matcher.build();
+    if (matcher.question.test(question)) return enforceFullReportPolicy(matcher.build());
   }
   if (/\b(cyber|attack|malware|vulnerab|exploit|threat|actor|technique|mitre|cve|breach)\b/i.test(question)) {
     return NO_RESULTS;
