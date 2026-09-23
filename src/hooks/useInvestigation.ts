@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
-import { readThread, runInvestigation } from "@/hooks/conversationStore";
+import { readThread, rememberThread, runInvestigation } from "@/hooks/conversationStore";
 import { validateInvestigationQuestion } from "@/security/inputValidation";
 import type { Thread, Turn } from "@/types/investigation";
 
@@ -87,7 +87,10 @@ export function useInvestigation() {
       finishedAt: Date.now(),
       errorTurnThreadId: null,
     });
-    // Let the shell (sidebar list) know a thread changed.
+    rememberThread(thread.threadId);
+    // Let the shell (sidebar/history) know a thread changed. The
+    // conversation store already notifies its own subscribers, so this
+    // event is for listeners outside the store (none currently).
     window.dispatchEvent(
       new CustomEvent("syntra:history-updated", { detail: thread.threadId }),
     );
@@ -200,6 +203,7 @@ export function useInvestigation() {
           finishedAt: thread.finishedAt,
           errorTurnThreadId: null,
         });
+        rememberThread(thread.threadId);
         if (opts?.silent) {
           // Quiet resume: no toast spam when returning to the workspace.
           return;
@@ -232,6 +236,7 @@ export function useInvestigation() {
   /** Leave the conversation view entirely (empty workspace). */
   const reset = useCallback(() => {
     runIdRef.current += 1;
+    rememberThread(null);
     setState(emptyState());
   }, []);
 

@@ -33,6 +33,21 @@ const store: Investigation[] = [];
 const HISTORY_LIMIT = 60;
 let idCounter = 0;
 
+/**
+ * Id of the conversation the user last had open — module-level so it
+ * survives view unmounts (Investigate → History → Investigate resumes the
+ * same chat instead of starting a new one). Session-only by design.
+ */
+let lastThreadId: string | null = null;
+
+export function rememberThread(id: string | null): void {
+  lastThreadId = id;
+}
+
+export function getLastThreadId(): string | null {
+  return lastThreadId;
+}
+
 const FAILURE_PATTERN = /\b(fail|error)\b/i;
 const SLOW_PATTERN = /\bslow\b/i;
 
@@ -163,10 +178,8 @@ export async function runInvestigation(
 
   store.unshift(investigation);
   if (store.length > HISTORY_LIMIT) store.length = HISTORY_LIMIT;
+  lastThreadId = investigation.threadId;
   notifyChanged();
   return investigation;
 }
 
-export function conversationStoreIsEmpty(): boolean {
-  return store.length === 0;
-}

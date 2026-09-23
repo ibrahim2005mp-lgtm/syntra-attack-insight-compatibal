@@ -1,29 +1,33 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Session-only guest identity. The frontend runs without any backend, so a
- * lightweight in-memory session satisfies the protected-route guard for the
- * life of the page. Swap this hook for a real identity provider when you
- * reconnect a backend — the UI (RequireAuth, Auth page, Sidebar) only
+ * Session-only local identity. The frontend runs without any backend, so a
+ * lightweight in-memory session gates the protected routes and gives the
+ * Auth page a working (purely local) flow. Nothing is validated, persisted
+ * or transmitted — swap this hook for a real identity provider when you
+ * reconnect a backend; the UI (RequireAuth, Auth page, Sidebar) only
  * consumes this hook's return shape.
+ *
+ * Behavior:
+ *  - starts signed-out (so RequireAuth redirects to /auth as designed)
+ *  - password / guest sign-in creates the session immediately
+ *  - email-OTP is two-step: requesting a code does NOT sign in; submitting
+ *    the code does (matching the UI's code-entry step)
  */
 interface SessionUser {
   id: string;
 }
 
-let session: SessionUser | null | undefined;
+let session: SessionUser | null = null;
 const listeners = new Set<() => void>();
 
-function getSession(): SessionUser | null {
-  if (session === undefined) {
-    // Guest session for this page load; nothing persisted or transmitted.
-    session = { id: "guest" };
-  }
-  return session;
+function setSession(next: SessionUser | null): void {
+  session = next;
+  for (const listener of listeners) listener();
 }
 
 function getSnapshot(): SessionUser | null {
-  return getSession();
+  return session;
 }
 
 function subscribe(listener: () => void): () => void {
@@ -39,15 +43,25 @@ export function useAuth() {
     isAuthenticated: user !== null,
     user,
     /**
-     * Local session identity: accepts the Auth page's (provider, params)
-     * call shape for API parity — every provider resolves to the same
-     * in-memory guest session. Nothing is validated, stored or transmitted.
+     * Local sign-in: accepts the Auth page's (provider, params) call shape.
+     * Every provider resolves to the same in-memory guest session; the
+     * email-OTP first step (no code yet) intentionally signs nobody in.
      */
     signIn: async (provider?: string, params?: Record<string, unknown>) => {
-      void provider;
-      void params;
-      return getSession();
+      const code = params && "code" in params ? params.code : undefined;
+      if (provider === "email-otp" && typeof code !== "string") {
+        // Code requested but not verified yet — keep the session signed out
+        // so the Auth page can show its code-entry step.
+        return null;
+      }
+      const current = session;
+      if (current !== null) return current;
+      const next: SessionUser = { id: "guest" };
+      setSession(next);
+      return next;
     },
-    signOut: async () => undefined,
+    signOut: async () => {
+      setSession(null);
+    },
   };
 }

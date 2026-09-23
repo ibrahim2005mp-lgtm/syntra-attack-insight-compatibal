@@ -1,5 +1,5 @@
 import { MessageSquarePlus } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { InvestigationInput } from "@/components/InvestigationInput";
 import { WorkspacePage } from "@/components/WorkspacePage";
@@ -7,6 +7,7 @@ import { NeutralBadge, StatusBadge } from "@/components/StatusBadge";
 import { ErrorState, LoadingState, NoticeState, SafetyResponse } from "@/components/results/States";
 import { InvestigationResultView } from "@/components/results/InvestigationResultView";
 import { useInvestigation } from "@/hooks/useInvestigation";
+import { getLastThreadId } from "@/hooks/conversationStore";
 import { DEMO_HEADING, DEMO_NOTE, DEMO_PROMPTS, type DemoPrompt } from "@/mock/demoPrompts";
 import type { Turn } from "@/types/investigation";
 
@@ -48,6 +49,9 @@ export default function Investigate({ locationState }: InvestigateProps) {
   } = useInvestigation();
   const [draft, setDraft] = useState<string | undefined>(undefined);
   const [searchParams, setSearchParams] = useSearchParams();
+  // Auto-resume runs at most once per mount so it never interrupts an
+  // active exchange.
+  const autoResumedRef = useRef(false);
 
   const restoreId = locationState?.restoreId;
   const restoreNonce = locationState?.restoreNonce;
@@ -65,8 +69,17 @@ export default function Investigate({ locationState }: InvestigateProps) {
       void restore(shareId);
       // Consume the param so refresh/back behave predictably.
       setSearchParams({}, { replace: true });
+      return;
     }
-  }, [shareId, restore, setSearchParams]);
+    // Fresh mount with no explicit restore request: resume the conversation
+    // the user last had open so navigating Investigate → History →
+    // Investigate continues the same chat instead of starting a new one.
+    const lastId = getLastThreadId();
+    if (!autoResumedRef.current && restoreId === undefined && lastId !== null) {
+      autoResumedRef.current = true;
+      void restore(lastId, { silent: true });
+    }
+  }, [shareId, restoreId, restore, setSearchParams]);
 
   // Tell the shell which conversation is open so the sidebar can highlight
   // it; clears when the workspace resets or unmounts.
