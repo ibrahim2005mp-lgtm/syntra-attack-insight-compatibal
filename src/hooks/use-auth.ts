@@ -11,8 +11,6 @@ import { useSyncExternalStore } from "react";
  * Behavior:
  *  - starts signed-out (so RequireAuth redirects to /auth as designed)
  *  - password / guest sign-in creates the session immediately
- *  - email-OTP is two-step: requesting a code does NOT sign in; submitting
- *    the code does (matching the UI's code-entry step)
  */
 interface SessionUser {
   id: string;
@@ -43,17 +41,12 @@ export function useAuth() {
     isAuthenticated: user !== null,
     user,
     /**
-     * Local sign-in: accepts the Auth page's (provider, params) call shape.
-     * Every provider resolves to the same in-memory guest session; the
-     * email-OTP first step (no code yet) intentionally signs nobody in.
+     * Local sign-in: accepts the Auth page's (provider, params) call shape
+     * for API parity — every provider resolves to the same guest session.
      */
-    signIn: async (provider?: string, params?: Record<string, unknown>) => {
-      const code = params && "code" in params ? params.code : undefined;
-      if (provider === "email-otp" && typeof code !== "string") {
-        // Code requested but not verified yet — keep the session signed out
-        // so the Auth page can show its code-entry step.
-        return null;
-      }
+    signIn: async (_provider?: string, _params?: Record<string, unknown>) => {
+      void _provider;
+      void _params;
       const current = session;
       if (current !== null) return current;
       const next: SessionUser = { id: "guest" };
