@@ -376,7 +376,43 @@ function reportResult(args: {
     sources: args.sources,
     evidenceStatus,
     safetyStatus: "safe",
-    lab: args.lab,
+    lab: args.lab ?? defaultLabFor(args.chain),
+  };
+}
+
+/**
+ * Every full report exposes the lab sections (07/08). When a report does not
+ * define a bespoke lab, derive one for the report's primary (first chain)
+ * technique so the validation sections are always present.
+ */
+function defaultLabFor(chain: AttackStage[]): LabEnvironment {
+  const stage = chain[0];
+  const techniqueId = stage?.techniqueId ?? "T0000";
+  const techniqueName = stage?.techniqueName ?? "Documented Technique";
+  return {
+    id: `LAB-${techniqueId}`,
+    techniqueId,
+    techniqueName,
+    available: true,
+    labType: "Controlled Technique Validation",
+    platform: "windows",
+    runtimeEnvironment: "Windows Virtual Machine (VM)",
+    networkMode: "Isolated Lab Network",
+    validationSource: "SYNTRA Research Lab",
+    objective: `Safely observe and validate the behavior associated with ${techniqueId} inside a controlled and isolated environment.`,
+    estimatedDuration: "10–15 Minutes",
+    difficulty: "Intermediate",
+    safetyBoundary:
+      "The lab runs in an isolated environment and is not intended for use against external or unauthorized systems.",
+    sessionSteps: [
+      { text: "Review the scenario and objective." },
+      { text: "Access the Windows VM and open the required tools." },
+      { text: "Execute the provided commands or script in the lab environment." },
+      { text: `Observe the expected ${techniqueId} behavior (processes, logs, artifacts).` },
+      { text: "Collect evidence and compare with the expected results." },
+      { text: "Complete the lab and view the validation result." },
+    ],
+    scenarioObjective: `Safely observe and validate the behavior associated with ${techniqueId} inside an isolated Windows virtual machine.`,
   };
 }
 
