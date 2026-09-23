@@ -13,12 +13,15 @@ import {
   EyeOff,
   KeyRound,
   Loader2,
+  LogIn,
   Mail,
+  UserPlus,
   UserX,
 } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router";
+import { cn } from "@/lib/utils";
 
 interface AuthProps {
   redirectAfterAuth?: string;
@@ -31,7 +34,7 @@ function resolveRedirectAfterAuth(returnTo: string | null, fallback = "/investig
   return fallback;
 }
 
-type PasswordMode = "signIn" | "signUp";
+type AuthMode = "signIn" | "signUp";
 
 function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
@@ -42,7 +45,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     redirectAfterAuth,
   );
 
-  const [passwordMode, setPasswordMode] = useState<PasswordMode>("signIn");
+  const [mode, setMode] = useState<AuthMode>("signIn");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -70,6 +73,11 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     }
   };
 
+  const switchMode = (next: AuthMode) => {
+    setMode(next);
+    setError(null);
+  };
+
   /* ------------------------------ password ------------------------------ */
 
   const handlePasswordSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -89,7 +97,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       return;
     }
 
-    if (passwordMode === "signUp") {
+    if (mode === "signUp") {
       if (password !== confirmPassword) {
         setError(CREDENTIAL_ERRORS.mismatch);
         return;
@@ -103,19 +111,16 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
 
     run(async () => {
       await signIn("password", {
-        flow: passwordMode,
+        flow: mode,
         email: emailCheck.value as string,
         password,
       });
-      toast.success(
-        passwordMode === "signUp" ? "Account created" : "Signed in",
-        {
-          description:
-            passwordMode === "signUp"
-              ? "Welcome to SYNTRA — your investigation workspace is ready."
-              : "Welcome back — redirecting to your workspace.",
-        },
-      );
+      toast.success(mode === "signUp" ? "Account created" : "Signed in", {
+        description:
+          mode === "signUp"
+            ? "Welcome to SYNTRA — your investigation workspace is ready."
+            : "Welcome back — redirecting to your workspace.",
+      });
       navigate(redirect);
     });
   };
@@ -141,14 +146,52 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
           <div className="syn-card overflow-hidden">
             <div className="px-6 pb-3 pt-6 text-center">
               <h1 className="text-lg font-semibold text-foreground">
-                Sign in to SYNTRA
+                Welcome to SYNTRA
               </h1>
               <p className="mt-1 text-xs text-muted-foreground">
-                Use your account to continue to your workspace.
+                Sign in or create an account to reach your workspace.
               </p>
             </div>
 
-            {/* ===================== password sign-in/up ====================== */}
+            {/* ==================== mode switcher buttons ==================== */}
+            <div
+              className="mx-6 mb-4 grid grid-cols-2 gap-1 rounded-md border border-border bg-[var(--syntra-surface-soft)] p-1"
+              role="tablist"
+              aria-label="Authentication mode"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === "signIn"}
+                onClick={() => switchMode("signIn")}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 rounded-sm px-2 py-2 text-xs font-semibold transition-colors",
+                  mode === "signIn"
+                    ? "bg-[var(--syntra-orange)] text-black"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <LogIn className="size-3.5" />
+                Sign In
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === "signUp"}
+                onClick={() => switchMode("signUp")}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 rounded-sm px-2 py-2 text-xs font-semibold transition-colors",
+                  mode === "signUp"
+                    ? "bg-[var(--syntra-orange)] text-black"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <UserPlus className="size-3.5" />
+                Sign Up
+              </button>
+            </div>
+
+            {/* =================== password sign-in/up form =================== */}
             <form onSubmit={handlePasswordSubmit}>
               <div className="flex flex-col gap-3 px-6 pb-5">
                 <div className="relative">
@@ -170,13 +213,11 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     name="password"
                     placeholder="Password"
                     type={showPassword ? "text" : "password"}
-                    autoComplete={
-                      passwordMode === "signUp" ? "new-password" : "current-password"
-                    }
+                    autoComplete={mode === "signUp" ? "new-password" : "current-password"}
                     className="pl-9 pr-9"
                     disabled={isLoading}
                     required
-                    minLength={passwordMode === "signUp" ? 8 : undefined}
+                    minLength={mode === "signUp" ? 8 : undefined}
                   />
                   <button
                     type="button"
@@ -188,7 +229,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   </button>
                 </div>
 
-                {passwordMode === "signUp" && (
+                {mode === "signUp" && (
                   <>
                     <div className="relative">
                       <KeyRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -231,31 +272,18 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 >
                   {isLoading ? (
                     <Loader2 className="size-4 animate-spin" />
-                  ) : passwordMode === "signUp" ? (
+                  ) : mode === "signUp" ? (
                     <>
                       Create account
                       <ArrowRight className="size-4" />
                     </>
                   ) : (
                     <>
-                      Sign in
+                      Log in
                       <ArrowRight className="size-4" />
                     </>
                   )}
                 </Button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPasswordMode(passwordMode === "signIn" ? "signUp" : "signIn");
-                    setError(null);
-                  }}
-                  className="text-center text-xs text-muted-foreground transition-colors hover:text-[var(--syntra-orange)]"
-                >
-                  {passwordMode === "signIn"
-                    ? "New to SYNTRA? Create an account"
-                    : "Already have an account? Sign in"}
-                </button>
               </div>
             </form>
 
