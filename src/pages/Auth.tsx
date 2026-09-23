@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
+import { sendWelcomeNotification } from "@/services/notifications";
 import { SyntraLogo } from "@/components/Logo";
 import {
   validateEmailCredential,
@@ -115,6 +116,10 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
         email: emailCheck.value as string,
         password,
       });
+      // Fire-and-forget: a notification failure must never block sign-in.
+      if (mode === "signUp") {
+        void sendWelcomeNotification(emailCheck.value as string);
+      }
       toast.success(mode === "signUp" ? "Account created" : "Signed in", {
         description:
           mode === "signUp"

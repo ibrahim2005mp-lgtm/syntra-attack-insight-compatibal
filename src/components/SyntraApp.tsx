@@ -4,7 +4,6 @@ import { Sidebar, type SyntraView } from "@/components/Sidebar";
 import Investigate from "@/pages/Investigate";
 import HistoryPage from "@/pages/History";
 import About from "@/pages/About";
-import { useApiStatus } from "@/hooks/useApiStatus";
 
 const VIEW_ROUTES: Record<SyntraView, string> = {
   investigate: "/investigate",
@@ -29,7 +28,6 @@ function ViewLoading() {
 export function SyntraApp({ view }: { view: SyntraView }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const apiOnline = useApiStatus();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
 
@@ -76,7 +74,6 @@ export function SyntraApp({ view }: { view: SyntraView }) {
         onNavigate={handleNavigate}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        apiOnline={apiOnline}
         onRestoreInvestigation={(id) =>
           window.dispatchEvent(new CustomEvent("syntra:restore", { detail: id }))
         }

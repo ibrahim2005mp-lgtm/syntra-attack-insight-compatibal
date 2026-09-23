@@ -1,5 +1,4 @@
 import {
-  Activity,
   Archive,
   ChevronLeft,
   CircleUserRound,
@@ -12,7 +11,6 @@ import {
   PinOff,
   Radar,
   Share,
-  ShieldCheck,
   Trash2,
   X,
 } from "lucide-react";
@@ -59,7 +57,6 @@ interface SidebarProps {
   /** Mobile drawer visibility. */
   open: boolean;
   onClose: () => void;
-  apiOnline: boolean;
   /** Restore a stored conversation by any of its turn ids (Recent click). */
   onRestoreInvestigation: (id: string) => void;
   /** Thread id of the conversation currently open in the workspace. */
@@ -265,7 +262,6 @@ function SidebarContent({
   active,
   onNavigate,
   collapsed,
-  apiOnline,
   onToggleCollapse,
   onNavigateAway,
   onRestoreInvestigation,
@@ -274,7 +270,6 @@ function SidebarContent({
   active: SyntraView;
   onNavigate: (view: SyntraView) => void;
   collapsed: boolean;
-  apiOnline: boolean;
   onToggleCollapse?: () => void;
   onNavigateAway: () => void;
   onRestoreInvestigation: (id: string) => void;
@@ -388,23 +383,9 @@ function SidebarContent({
 
       <div className="flex-1" />
 
-      {/* Status + account */}
+      {/* Account */}
       <div className="flex flex-col gap-1 px-2.5 pb-4">
         <hr className="syn-nav-divider mt-0 mb-1" />
-        <div className={cn("syn-nav-item", "pointer-events-none")} title="Security Status">
-          <ShieldCheck className="size-4 shrink-0 text-[var(--syntra-success)]" />
-          {!collapsed && <span>Security Status</span>}
-          {!collapsed && <span className="ml-auto text-[10px] tracking-wide text-[var(--syntra-success)]">OK</span>}
-        </div>
-        <div className="syn-nav-item pointer-events-none" title="Frontend Status">
-          <Activity className={cn("size-4 shrink-0", apiOnline ? "text-[var(--syntra-success)]" : "text-[var(--syntra-danger)]")} />
-          {!collapsed && <span>Frontend Status</span>}
-          {!collapsed && (
-            <span className={cn("ml-auto text-[10px] tracking-wide", apiOnline ? "text-[var(--syntra-success)]" : "text-[var(--syntra-danger)]")}>
-              {apiOnline ? "Online" : "Offline"}
-            </span>
-          )}
-        </div>
         {user && !collapsed && (
           <div className="syn-nav-item pointer-events-none" title="Session">
             <CircleUserRound className="size-4 shrink-0" />
@@ -438,7 +419,6 @@ export function Sidebar({
   onNavigate,
   open,
   onClose,
-  apiOnline,
   onRestoreInvestigation,
   activeThreadId,
 }: SidebarProps) {
@@ -476,7 +456,6 @@ export function Sidebar({
             active={active}
             onNavigate={onNavigate}
             collapsed={collapsed}
-            apiOnline={apiOnline}
             onToggleCollapse={toggleCollapsed}
             onNavigateAway={() => undefined}
             onRestoreInvestigation={onRestoreInvestigation}
@@ -499,7 +478,6 @@ export function Sidebar({
               active={active}
               onNavigate={onNavigate}
               collapsed={false}
-              apiOnline={apiOnline}
               onNavigateAway={onClose}
               onRestoreInvestigation={onRestoreInvestigation}
               activeThreadId={activeThreadId}
