@@ -64,11 +64,27 @@ export function LoadingState({
   );
 }
 
-/** Polished error surface — never a stack trace or backend detail. */
-export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+/**
+ * Polished error surface — never a stack trace or backend detail. The
+ * optional hint names the failure category (validation, dependency down,
+ * rate limit, server failure) so states stay distinguishable, matching the
+ * API's explicit error semantics.
+ */
+export function ErrorState({
+  message,
+  hint,
+  onRetry,
+}: {
+  message: string;
+  hint?: string;
+  onRetry?: () => void;
+}) {
   return (
     <section className="syn-card p-6 text-center" role="alert">
       <p className="text-sm font-medium text-foreground">{message}</p>
+      {hint && (
+        <p className="mt-1.5 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">{hint}</p>
+      )}
       {onRetry && (
         <Button type="button" variant="outline" size="sm" className="mt-4" onClick={onRetry}>
           <RefreshCcw className="size-3.5" />

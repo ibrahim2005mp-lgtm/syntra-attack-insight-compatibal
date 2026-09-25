@@ -6,6 +6,13 @@ export type EvidenceStatus =
   | "unverified"
   | "insufficient";
 
+/**
+ * Evidence category — kept distinct by contract. Source Evidence (historical
+ * reporting) and Observed Lab Evidence (lab telemetry) must never share an
+ * ambiguous label, icon, color or combined timeline.
+ */
+export type EvidenceCategory = "source" | "lab";
+
 export type SafetyStatus = "safe" | "refused";
 
 /** Result-state categories the UI renders as polished states. */
@@ -21,6 +28,8 @@ export interface Evidence {
   /** Technique / claim this evidence supports, e.g. "T1059". */
   refId: string;
   status: EvidenceStatus;
+  /** Evidence category — defaults to "source" (historical reporting). */
+  category?: EvidenceCategory;
   sourceName: string;
   sourceUrl?: string;
   /** Quote or extract from the source — rendered as plain text. */
@@ -112,6 +121,13 @@ export interface LabEnvironment {
   techniqueName: string;
   /** True when a lab exists for this technique. */
   available: boolean;
+  /**
+   * True only when the backend confirms an authorized, isolated, ready
+   * target that supports an audited launch. Descriptive lab metadata alone
+   * never sets this; when false or undefined, launch controls must be
+   * disabled/absent.
+   */
+  launchable?: boolean;
   /** e.g. "Controlled Technique Validation". */
   labType: string;
   /** Initially selected platform. */

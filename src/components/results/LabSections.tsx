@@ -166,34 +166,45 @@ export function LabValidation({ lab, selectedPlatform }: { lab: LabEnvironment; 
           })}
         </ul>
 
-        <button
-          type="button"
-          className="syn-btn-primary mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--syntra-orange)] px-4 text-sm font-semibold tracking-wide text-[color-mix(in_oklab,var(--syntra-orange)_20%,black)]"
-          onClick={() => {
-            setLaunched((v) => !v);
-            toast(launched ? "Lab session ended" : "Lab session started", {
-              description: launched
-                ? "The isolated lab environment was released."
-                : `${lab.techniqueId} validation is running inside the isolated ${LAB_PLATFORM_LABEL[selectedPlatform]} environment.`,
-            });
-            window.setTimeout(() => {
-              const el = document.getElementById("syn-isolated-lab");
-              el?.scrollIntoView({ behavior: "smooth", block: "start" });
-            }, 60);
-          }}
-        >
-          {launched ? (
-            <>
-              <Square className="size-4" aria-hidden="true" />
-              END SESSION
-            </>
-          ) : (
-            <>
-              <Play className="size-4" aria-hidden="true" />
-              LAUNCH ISOLATED LAB
-            </>
-          )}
-        </button>
+        {/* Launch control — gated on confirmed backend orchestrator
+            capability. Descriptive metadata alone never enables it. */}
+        {lab.launchable === true ? (
+          <button
+            type="button"
+            className="syn-btn-primary mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--syntra-orange)] px-4 text-sm font-semibold tracking-wide text-[color-mix(in_oklab,var(--syntra-orange)_20%,black)]"
+            onClick={() => {
+              setLaunched((v) => !v);
+              toast(launched ? "Lab session ended" : "Lab session started", {
+                description: launched
+                  ? "The isolated lab environment was released."
+                  : `${lab.techniqueId} validation is running inside the isolated ${LAB_PLATFORM_LABEL[selectedPlatform]} environment.`,
+              });
+              window.setTimeout(() => {
+                const el = document.getElementById("syn-isolated-lab");
+                el?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 60);
+            }}
+          >
+            {launched ? (
+              <>
+                <Square className="size-4" aria-hidden="true" />
+                END SESSION
+              </>
+            ) : (
+              <>
+                <Play className="size-4" aria-hidden="true" />
+                LAUNCH ISOLATED LAB
+              </>
+            )}
+          </button>
+        ) : (
+          <p
+            className="mt-4 rounded-md border border-border bg-[var(--syntra-surface-soft)] px-3 py-2.5 text-center text-[11px] leading-relaxed text-muted-foreground"
+            role="note"
+          >
+            Guided walkthrough only — no live lab is attached to this report.
+          </p>
+        )}
         <p className="mt-2 text-center text-[10px] leading-relaxed text-muted-foreground">
           SYNTRA automatically selects the required runtime environment based on the
           selected technique.
@@ -219,8 +230,8 @@ export function IsolatedLab({ lab, selectedPlatform }: { lab: LabEnvironment; se
       setCurrentStep((s) => s + 1);
     } else {
       setRunning(false);
-      toast.success("Lab validation complete", {
-        description: `${lab.techniqueId} behavior observed and compared with the expected results.`,
+      toast.success("Walkthrough complete", {
+        description: `${lab.techniqueId} guided steps finished — no live environment was attached.`,
       });
     }
   };
@@ -351,8 +362,8 @@ export function IsolatedLab({ lab, selectedPlatform }: { lab: LabEnvironment; se
                   onClick={() => {
                     setRunning(true);
                     setCurrentStep(0);
-                    toast("Lab session started", {
-                      description: "Follow the guided steps inside the isolated environment.",
+                    toast("Guided session started", {
+                      description: "Follow the walkthrough steps for this technique.",
                     });
                   }}
                 >
@@ -373,8 +384,8 @@ export function IsolatedLab({ lab, selectedPlatform }: { lab: LabEnvironment; se
                     className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-[color-mix(in_oklab,var(--syntra-danger)_45%,transparent)] px-3 text-xs font-semibold text-[var(--syntra-danger)] transition-colors hover:bg-[color-mix(in_oklab,var(--syntra-danger)_10%,transparent)]"
                     onClick={() => {
                       setRunning(false);
-                      toast("Session ended", {
-                        description: "The isolated lab environment was released.",
+                      toast("Walkthrough ended", {
+                        description: "The guided session was closed. No live environment was attached.",
                       });
                     }}
                   >

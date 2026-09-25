@@ -569,6 +569,18 @@
     background: var(--syntra-surface-soft);
     border-color: var(--syntra-border);
   }
+  /* Evidence category badges — Source vs Lab are visually distinct kinds,
+     never a shared ambiguous label (data-flow evidence separation). */
+  .syn-badge-source {
+    color: var(--foreground);
+    background: color-mix(in oklab, var(--foreground) 7%, transparent);
+    border-color: color-mix(in oklab, var(--foreground) 22%, transparent);
+  }
+  .syn-badge-lab {
+    color: oklch(0.78 0.14 195);
+    background: color-mix(in oklab, oklch(0.78 0.14 195) 12%, transparent);
+    border-color: color-mix(in oklab, oklch(0.78 0.14 195) 38%, transparent);
+  }
   .syn-badge-orange {
     color: var(--syntra-orange);
     background: var(--syntra-orange-soft);

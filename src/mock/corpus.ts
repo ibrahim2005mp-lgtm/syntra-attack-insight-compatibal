@@ -160,6 +160,10 @@ const apt3Lab: LabEnvironment = {
   techniqueId: "T1059",
   techniqueName: "Command and Scripting Interpreter",
   available: true,
+  // SYNTRA's own validated demo lab: the guided walkthrough is a product
+  // capability, so launch controls stay available in the local engine.
+  // Remote/backend labs must have launchable confirmed by the server.
+  launchable: true,
   labType: "Controlled Technique Validation",
   platform: "windows",
   runtimeEnvironment: "Windows Virtual Machine (VM)",
@@ -757,6 +761,8 @@ export function defaultLabFor(chain: AttackStage[]): LabEnvironment {
     techniqueId,
     techniqueName,
     available: true,
+    // Local engine lab: same rationale as the APT3 demo lab above.
+    launchable: true,
     labType: "Controlled Technique Validation",
     platform: "windows",
     runtimeEnvironment: "Windows Virtual Machine (VM)",

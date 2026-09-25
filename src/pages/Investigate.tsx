@@ -7,6 +7,7 @@ import { NeutralBadge, StatusBadge } from "@/components/StatusBadge";
 import { ErrorState, LoadingState, NoticeState, SafetyResponse } from "@/components/results/States";
 import { InvestigationResultView } from "@/components/results/InvestigationResultView";
 import { useInvestigation } from "@/hooks/useInvestigation";
+import type { ApiErrorCode } from "@/api/v1/contract";
 import { getLastThreadId } from "@/hooks/conversationStore";
 import type { Turn } from "@/types/investigation";
 
@@ -14,6 +15,15 @@ interface InvestigateProps {
   /** Router location state carrying a history-restore request. */
   locationState?: { restoreId?: string; restoreNonce?: number } | null;
 }
+
+/** Short, honest failure-category caption under the error message. */
+const ERROR_HINTS: Record<ApiErrorCode, string> = {
+  invalid_input: "Check the question and try again",
+  rate_limited: "Rate limited — retry in a moment",
+  dependency_unavailable: "Retrieval backend unavailable",
+  not_found: "Record not found",
+  internal_error: "Request failed",
+};
 
 function formatTimestamp(ms: number): string {
   try {
@@ -40,6 +50,7 @@ export default function Investigate({ locationState }: InvestigateProps) {
     thread,
     pendingQuestion,
     error,
+    errorCode,
     ask,
     retry,
     restore,
@@ -177,7 +188,11 @@ export default function Investigate({ locationState }: InvestigateProps) {
 
       {phase === "error" && turns.length === 0 && (
         <div className="flex flex-col gap-6">
-          <ErrorState message={error ?? "The investigation could not be completed."} onRetry={retry} />
+          <ErrorState
+            message={error ?? "The investigation could not be completed."}
+            hint={errorCode ? ERROR_HINTS[errorCode] : undefined}
+            onRetry={retry}
+          />
         </div>
       )}
 
@@ -192,7 +207,11 @@ export default function Investigate({ locationState }: InvestigateProps) {
           )}
 
           {phase === "error" && (
-            <ErrorState message={error ?? "The investigation could not be completed."} onRetry={retry} />
+            <ErrorState
+              message={error ?? "The investigation could not be completed."}
+              hint={errorCode ? ERROR_HINTS[errorCode] : undefined}
+              onRetry={retry}
+            />
           )}
 
           <div className="pb-2">

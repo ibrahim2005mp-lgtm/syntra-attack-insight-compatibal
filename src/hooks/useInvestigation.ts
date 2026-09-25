@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
-import { readThread, rememberThread, runInvestigation } from "@/hooks/conversationStore";
+import type { ApiErrorCode } from "@/api/v1/contract";
+import { askEngine, toEngineError } from "@/api/v1/adapter";
+import { persistExternalTurn, readThread, rememberThread, runInvestigation } from "@/hooks/conversationStore";
 import { validateInvestigationQuestion } from "@/security/inputValidation";
 import type { Thread, Turn } from "@/types/investigation";
 
@@ -13,6 +15,8 @@ interface WorkspaceState {
   /** Question currently being investigated (pending turn). */
   pendingQuestion: string;
   error: string | null;
+  /** Machine-readable failure category — distinct UI states per code. */
+  errorCode: ApiErrorCode | null;
   finishedAt: number | null;
   /** Id of the turn that just errored, so retry targets the right thread. */
   errorTurnThreadId: string | null;
@@ -44,22 +48,40 @@ function verdictOf(turn: Turn): string {
   return "Available evidence is not sufficient.";
 }
 
+/** User-facing copy per normalized engine failure — never a stack trace. */
+function errorMessageForCode(code: ApiErrorCode, fallback: string): string {
+  switch (code) {
+    case "invalid_input":
+      return fallback;
+    case "rate_limited":
+      return "Too many requests — please wait a moment and try again.";
+    case "dependency_unavailable":
+      return "The investigation backend is temporarily unavailable. Please try again shortly.";
+    case "not_found":
+      return "That conversation could not be found.";
+    case "internal_error":
+    default:
+      return "The investigation could not be completed. Please try again.";
+  }
+}
+
 function emptyState(): WorkspaceState {
   return {
     phase: "idle",
     thread: null,
     pendingQuestion: "",
     error: null,
+    errorCode: null,
     finishedAt: null,
     errorTurnThreadId: null,
   };
 }
 
 /**
- * Owns the current conversation lifecycle, backed by the in-memory
- * conversation store (session-only). Follow-up questions asked while a
- * thread is open append to that thread — a new conversation is only created
- * from the empty state or via "New conversation".
+ * Owns the current conversation lifecycle, backed by the engine adapter.
+ * Follow-up questions asked while a thread is open append to that thread —
+ * a new conversation is only created from the empty state or via
+ * "New conversation".
  */
 export function useInvestigation() {
   const [state, setState] = useState<WorkspaceState>(emptyState);
@@ -73,6 +95,7 @@ export function useInvestigation() {
         ...emptyState(),
         phase: "error",
         error: "That conversation could not be loaded.",
+        errorCode: "not_found",
       });
       toast.error("Could not load conversation", {
         description: "The record may have been removed.",
@@ -84,6 +107,7 @@ export function useInvestigation() {
       thread,
       pendingQuestion: "",
       error: null,
+      errorCode: null,
       finishedAt: Date.now(),
       errorTurnThreadId: null,
     });
@@ -124,6 +148,7 @@ export function useInvestigation() {
           phase: "error",
           pendingQuestion: question,
           error: messages[validation.error ?? "empty"] ?? "Invalid input.",
+          errorCode: "invalid_input",
         }));
         return;
       }
@@ -133,6 +158,7 @@ export function useInvestigation() {
         phase: "loading",
         pendingQuestion: question,
         error: null,
+        errorCode: null,
         errorTurnThreadId: threadId ?? null,
       }));
       toast("Investigation started", {
@@ -140,20 +166,35 @@ export function useInvestigation() {
       });
 
       try {
-        const turn = await runInvestigation(question, threadId, fullReportMode);
+        const turn = await askEngine(question, threadId, fullReportMode, runInvestigation);
         if (runIdRef.current !== runId) return;
+        // Remote turns are persisted here (locally resolved turns already
+        // persisted themselves inside runInvestigation).
+        if (turn.source === "remote") {
+          await refreshThread(
+            persistExternalTurn({
+              id: turn.id,
+              threadId,
+              question: turn.question,
+              createdAt: turn.createdAt,
+              result: turn.result,
+            }).threadId,
+            runId,
+            true,
+          );
+          return;
+        }
         await refreshThread(turn.threadId, runId, true);
       } catch (error) {
         if (runIdRef.current !== runId) return;
-        const message =
-          error instanceof Error && error.message === "not_found"
-            ? "That conversation could not be found."
-            : "The investigation could not be completed. Please try again.";
+        const engineError = toEngineError(error);
+        const message = errorMessageForCode(engineError.code, engineError.message);
         setState((prev) => ({
           ...prev,
           phase: "error",
           pendingQuestion: question,
           error: message,
+          errorCode: engineError.code,
           errorTurnThreadId: threadId ?? null,
         }));
         toast.error("Investigation failed", { description: message });
@@ -180,7 +221,7 @@ export function useInvestigation() {
   const restore = useCallback(
     async (id: string, opts?: { silent?: boolean }) => {
       const runId = ++runIdRef.current;
-      setState((prev) => ({ ...prev, phase: "loading", pendingQuestion: "", error: null }));
+      setState((prev) => ({ ...prev, phase: "loading", pendingQuestion: "", error: null, errorCode: null }));
       try {
         const thread = readThread(id);
         if (runIdRef.current !== runId) return;
@@ -193,6 +234,7 @@ export function useInvestigation() {
             ...emptyState(),
             phase: "error",
             error: "That conversation could not be restored.",
+            errorCode: "not_found",
           });
           toast.error("Could not restore conversation", {
             description: "The record may have been removed.",
@@ -204,6 +246,7 @@ export function useInvestigation() {
           thread,
           pendingQuestion: "",
           error: null,
+          errorCode: null,
           finishedAt: thread.finishedAt,
           errorTurnThreadId: null,
         });
@@ -228,6 +271,7 @@ export function useInvestigation() {
           ...emptyState(),
           phase: "error",
           error: "That conversation could not be restored.",
+          errorCode: "internal_error",
         });
         toast.error("Could not restore conversation", {
           description: "The record may have been removed.",
@@ -257,6 +301,7 @@ export function useInvestigation() {
         phase: "done",
         pendingQuestion: "",
         error: null,
+        errorCode: null,
         errorTurnThreadId: null,
       };
     });

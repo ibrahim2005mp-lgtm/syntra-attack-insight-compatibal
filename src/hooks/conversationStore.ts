@@ -223,6 +223,44 @@ export async function runInvestigation(
   return investigation;
 }
 
+/**
+ * Persist a turn produced outside the local resolver (e.g. the remote
+ * backend adapter) into the session store so history, restore and the
+ * sidebar work uniformly for both engines. The result is stored as-is —
+ * it has already passed through the adapter mapping and the caller's
+ * report-policy validation.
+ *
+ * When `threadId` matches an open conversation, the turn joins that
+ * conversation (UI continuity); the v1 query contract is stateless, so the
+ * grouping is a presentation concern only.
+ */
+export function persistExternalTurn(args: {
+  id: string;
+  threadId?: string;
+  question: string;
+  createdAt: number;
+  result: InvestigationResult;
+}): Investigation {
+  let resolvedThreadId = "";
+  if (typeof args.threadId === "string" && args.threadId.length > 0) {
+    const root = store.find((item) => item.id === args.threadId || item.threadId === args.threadId);
+    if (root) resolvedThreadId = root.threadId;
+  }
+  const id = args.id.length > 0 ? args.id : `remote-${Date.now()}-${++idCounter}`;
+  const investigation: Investigation = {
+    id,
+    threadId: resolvedThreadId || id,
+    question: args.question,
+    createdAt: args.createdAt,
+    result: args.result,
+  };
+  store.unshift(investigation);
+  if (store.length > HISTORY_LIMIT) store.length = HISTORY_LIMIT;
+  lastThreadId = investigation.threadId;
+  notifyChanged();
+  return investigation;
+}
+
 /* --------------------------- thread mutations --------------------------- */
 
 /** Apply a mutation to every turn of a thread; returns false when not found. */

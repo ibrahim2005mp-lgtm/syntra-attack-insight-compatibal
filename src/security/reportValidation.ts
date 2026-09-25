@@ -23,6 +23,7 @@ export type ReportValidation =
 
 const EVIDENCE_STATUSES = new Set(["confirmed", "supported", "unverified", "insufficient"]);
 const SAFETY_STATUSES = new Set(["safe", "refused"]);
+const EVIDENCE_CATEGORIES = new Set(["source", "lab"]);
 const ENTITY_KINDS = new Set([
   "threat_actor",
   "campaign",
@@ -74,6 +75,8 @@ function validateEvidence(item: unknown): boolean {
     isNonEmptyString(item.id, 60) &&
     isNonEmptyString(item.refId, 60) &&
     isStatus(item.status) &&
+    // Category is optional (defaults to source) but must be a valid enum.
+    (item.category === undefined || (typeof item.category === "string" && EVIDENCE_CATEGORIES.has(item.category))) &&
     isNonEmptyString(item.sourceName, 160) &&
     isNonEmptyString(item.excerpt, 2000) &&
     isNonEmptyString(item.provenance, 160) &&
@@ -130,6 +133,9 @@ function validateLab(lab: unknown): boolean {
     isNonEmptyString(lab.id, 40) &&
     isNonEmptyString(lab.techniqueId, 40) &&
     typeof lab.available === "boolean" &&
+    // Launch capability is optional and must be boolean when present —
+    // it is never inferred from metadata by the validator or UI.
+    (lab.launchable === undefined || typeof lab.launchable === "boolean") &&
     typeof lab.platform === "string" &&
     LAB_PLATFORMS.has(lab.platform) &&
     Array.isArray(lab.sessionSteps) &&

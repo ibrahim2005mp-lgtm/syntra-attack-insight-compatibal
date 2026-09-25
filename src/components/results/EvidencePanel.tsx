@@ -1,4 +1,4 @@
-import { ExternalLink, FileText, LinkIcon, ShieldQuestion, X } from "lucide-react";
+import { ExternalLink, FileText, FlaskConical, LinkIcon, ShieldQuestion, X } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 import { NeutralBadge, StatusBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
@@ -12,12 +12,35 @@ function ProvenanceBadge({ provenance }: { provenance: string }) {
   );
 }
 
+/**
+ * Evidence category marker — Source Evidence and Observed Lab Evidence are
+ * never ambiguous: distinct icon, label and badge style, applied to every
+ * card so lab telemetry can never masquerade as historical reporting.
+ */
+function CategoryBadge({ category }: { category: NonNullable<Evidence["category"]> }) {
+  if (category === "lab") {
+    return (
+      <span className="syn-badge syn-badge-lab" title="Observed Lab Evidence — telemetry from SYNTRA's isolated lab, not historical source reporting">
+        <FlaskConical className="size-3" aria-hidden="true" />
+        Lab Evidence
+      </span>
+    );
+  }
+  return (
+    <span className="syn-badge syn-badge-source" title="Source Evidence — historical reporting from validated sources">
+      <FileText className="size-3" aria-hidden="true" />
+      Source Evidence
+    </span>
+  );
+}
+
 function EvidenceCard({ item, highlighted }: { item: Evidence; highlighted?: boolean }) {
   const urlCheck = validateExternalUrl(item.sourceUrl);
   return (
     <article className={cn("syn-card p-3", highlighted && "syn-evidence-highlight")}>
       <div className="flex flex-wrap items-center gap-2">
         {item.refId && <span className="syn-technique-id">{item.refId}</span>}
+        <CategoryBadge category={item.category ?? "source"} />
         <span className="truncate text-xs font-medium text-foreground">{item.sourceName}</span>
         <span className="ml-auto shrink-0">
           <StatusBadge status={item.status} />
