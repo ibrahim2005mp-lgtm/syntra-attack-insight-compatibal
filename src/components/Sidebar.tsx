@@ -391,7 +391,7 @@ function SidebarContent({
       <div className="flex-1" />
 
       {/* Account — Windows 11-style flyout: the Session row opens an account
-          menu with the identity header, workspace actions and End session. */}
+          menu with the identity header, workspace actions and Log out. */}
       <div className="flex flex-col gap-1 px-2.5 pb-4">
         <hr className="syn-nav-divider mt-0 mb-1" />
         {!collapsed && (
@@ -445,7 +445,7 @@ function SidebarContent({
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onSelect={() => void handleSignOut()}>
                 <LogOut className="size-4 shrink-0" aria-hidden="true" />
-                <span>End session</span>
+                <span>Log out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
