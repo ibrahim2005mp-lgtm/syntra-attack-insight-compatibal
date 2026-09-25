@@ -21,6 +21,7 @@ import type {
   QueryResponseBody,
   QueryResultItem,
 } from "./contract";
+import { clampDisplayText } from "@/security/inputValidation";
 import type {
   AttackStage,
   DetectionItem,
@@ -381,7 +382,16 @@ export function mapQueryResponse(response: QueryResponseBody): InvestigationResu
           message: "The backend reported success but returned no usable result payload.",
         };
       }
-      return report;
+      // Narrative answer and uncertainty are response-level fields: they
+      // pass through only when the server actually sent them (bounded as
+      // display text). Absence stays absent — nothing is invented here.
+      const answer = str(response.answer);
+      const uncertainty = str(response.uncertainty);
+      return {
+        ...report,
+        ...(answer ? { answer: clampDisplayText(answer, 8000) } : {}),
+        ...(uncertainty ? { uncertainty: clampDisplayText(uncertainty, 2000) } : {}),
+      };
     }
   }
 }

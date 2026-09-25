@@ -162,6 +162,14 @@ export interface InvestigationReport {
   sources: SourceRef[];
   evidenceStatus: EvidenceStatus;
   safetyStatus: SafetyStatus;
+  /**
+   * Grounded narrative answer from a validated generation service, when the
+   * backend returned one. Absent when only retrieval-backed results exist —
+   * the UI never assembles prose from evidence snippets.
+   */
+  answer?: string;
+  /** Server-stated uncertainty about the report, when the backend returned one. */
+  uncertainty?: string;
   /** Optional isolated-lab metadata for the validation sections. */
   lab?: LabEnvironment;
 }

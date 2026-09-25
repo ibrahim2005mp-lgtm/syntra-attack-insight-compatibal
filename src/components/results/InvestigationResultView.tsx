@@ -4,7 +4,9 @@ import {
   Cpu,
   Fingerprint,
   Link2,
+  MessageSquareText,
   MonitorCog,
+  TriangleAlert,
   Users,
 } from "lucide-react";
 import { useCallback, useId, useRef, useState } from "react";
@@ -122,10 +124,36 @@ export function InvestigationResultView({
 
   return (
     <div className="flex flex-col gap-8">
-      {/* 01 — Summary */}
+      {/* 01 — Summary. The grounded narrative answer renders only when the
+          backend returned one — the UI never assembles prose from evidence
+          snippets. A server-stated uncertainty is rendered as-is. */}
       <Section num="01" icon={<Fingerprint className="size-3.5 text-[var(--syntra-orange)]" aria-hidden="true" />} title="Summary">
-        <div className="syn-card p-4">
-          <p className="text-sm leading-relaxed text-foreground/90">{report.summary}</p>
+        <div className="flex flex-col gap-3">
+          {report.answer && (
+            <div className="syn-card p-4" aria-label="Grounded answer">
+              <p className="syn-section-title">
+                <MessageSquareText className="size-3.5 text-[var(--syntra-orange)]" aria-hidden="true" />
+                Response
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-foreground/90">{report.answer}</p>
+            </div>
+          )}
+          <div className="syn-card p-4">
+            <p className="text-sm leading-relaxed text-foreground/90">{report.summary}</p>
+          </div>
+          {report.uncertainty && (
+            <div
+              className="rounded-md border border-[color-mix(in_oklab,var(--syntra-amber)_35%,transparent)] bg-[color-mix(in_oklab,var(--syntra-amber)_8%,transparent)] p-3"
+              role="note"
+              aria-label="Reported uncertainty"
+            >
+              <p className="flex items-center gap-2 text-xs font-semibold text-[var(--syntra-amber)]">
+                <TriangleAlert className="size-3.5" aria-hidden="true" />
+                Uncertainty
+              </p>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">{report.uncertainty}</p>
+            </div>
+          )}
         </div>
       </Section>
 
