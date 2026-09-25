@@ -1,17 +1,21 @@
 import {
   Archive,
   ChevronLeft,
+  ChevronRight,
   CircleUserRound,
   Ellipsis,
   History,
   Info,
+  LifeBuoy,
   LogOut,
   Menu,
   Pencil,
   Pin,
   PinOff,
   Radar,
+  Settings,
   Share,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -276,7 +280,10 @@ function SidebarContent({
   activeThreadId: string | null;
 }) {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
+  /** Display identity for the session flyout (local sessions are guest-only). */
+  const userName = "Guest analyst";
+  const avatarInitials = "GA";
   // In-memory store is synchronous, so state initializes from it directly;
   // the effect only subscribes to later changes.
   const [recent, setRecent] = useState<HistoryItem[] | null>(() => readHistory());
@@ -383,20 +390,65 @@ function SidebarContent({
 
       <div className="flex-1" />
 
-      {/* Account */}
+      {/* Account — Windows 11-style flyout: the Session row opens an account
+          menu with the identity header, workspace actions and End session. */}
       <div className="flex flex-col gap-1 px-2.5 pb-4">
         <hr className="syn-nav-divider mt-0 mb-1" />
-        {user && !collapsed && (
-          <div className="syn-nav-item pointer-events-none" title="Session">
-            <CircleUserRound className="size-4 shrink-0" />
-            <span>Session</span>
-          </div>
-        )}
         {!collapsed && (
-          <button type="button" className="syn-end-session" onClick={handleSignOut}>
-            <LogOut className="size-4 shrink-0" />
-            <span>End session</span>
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="syn-session-trigger" title="Session menu">
+              <CircleUserRound className="size-4 shrink-0" />
+              <span className="min-w-0 flex-1 truncate">Session</span>
+              <ChevronRight className="size-3.5 shrink-0 opacity-70" aria-hidden="true" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="right"
+              align="end"
+              sideOffset={10}
+              className="syn-session-menu"
+              role="menu"
+            >
+              {/* Identity header */}
+              <div className="syn-session-menu-header" role="presentation">
+                <span className="syn-session-avatar" aria-hidden="true">
+                  {avatarInitials}
+                </span>
+                <span className="min-w-0">
+                  <span className="syn-session-menu-header-name">{userName}</span>
+                  <span className="syn-session-menu-header-meta">Session · Local workspace</span>
+                </span>
+                <ChevronRight className="syn-session-menu-header-chevron size-4" aria-hidden="true" />
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => {
+                  onNavigate("about");
+                  onNavigateAway();
+                }}
+              >
+                <Sparkles className="size-4 shrink-0" aria-hidden="true" />
+                <span>About SYNTRA</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
+                  onNavigate("about");
+                  onNavigateAway();
+                }}
+              >
+                <LifeBuoy className="size-4 shrink-0" aria-hidden="true" />
+                <span>Help &amp; principles</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                <Settings className="size-4 shrink-0" aria-hidden="true" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={() => void handleSignOut()}>
+                <LogOut className="size-4 shrink-0" aria-hidden="true" />
+                <span>End session</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
 
