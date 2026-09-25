@@ -5,6 +5,7 @@ import {
   Ellipsis,
   History,
   Info,
+  LogOut,
   Menu,
   Pencil,
   Pin,
@@ -12,7 +13,6 @@ import {
   Radar,
   Share,
   Trash2,
-  X,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -393,8 +393,8 @@ function SidebarContent({
           </div>
         )}
         {!collapsed && (
-          <button type="button" className="syn-nav-item" onClick={handleSignOut}>
-            <X className="size-4 shrink-0" />
+          <button type="button" className="syn-end-session" onClick={handleSignOut}>
+            <LogOut className="size-4 shrink-0" />
             <span>End session</span>
           </button>
         )}
