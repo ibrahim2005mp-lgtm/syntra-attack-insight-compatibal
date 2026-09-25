@@ -7,7 +7,7 @@ import {
   MonitorCog,
   Users,
 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import { AttackChain } from "./AttackChain";
 import { Detection, Mitigation } from "./DefenseSections";
 import { IdentifiedEntities } from "./IdentifiedEntities";
@@ -17,8 +17,13 @@ import { SourceList } from "./SourceList";
 import { EvidenceList } from "./EvidencePanel";
 import type { InvestigationReport, LabPlatform } from "@/types/investigation";
 
-/** Stable DOM id for the Evidence & Sources section (scroll target). */
-const EVIDENCE_SECTION_ID = "syn-evidence-section";
+/**
+ * DOM id prefix for the Evidence & Sources section. Each result view
+ * instance derives its own unique id from this, so a technique-name click
+ * in one conversation turn scrolls to that turn's evidence section — not
+ * to an older exchange's section that happens to share the id.
+ */
+const EVIDENCE_SECTION_ID_PREFIX = "syn-evidence-section";
 
 function Section({
   num,
@@ -89,6 +94,8 @@ export function InvestigationResultView({
   report: InvestigationReport;
   callbacks: ResultViewCallbacks;
 }) {
+  /** Unique, per-turn DOM id for this view's Evidence & Sources section. */
+  const evidenceSectionId = `${EVIDENCE_SECTION_ID_PREFIX}-${useId()}`;
   /** Technique currently targeted by a name click — drives evidence highlight. */
   const [highlightedRefId, setHighlightedRefId] = useState<string | null>(null);
   const highlightTimer = useRef<number | null>(null);
@@ -96,9 +103,9 @@ export function InvestigationResultView({
   const [labPlatform, setLabPlatform] = useState<LabPlatform | null>(null);
 
   /**
-   * Jump to the Evidence & Sources section and briefly highlight the
-   * clicked technique's evidence records. The section is always expanded,
-   * so only the scroll and highlight are needed.
+   * Jump to THIS turn's Evidence & Sources section and briefly highlight
+   * the clicked technique's evidence records. The section is always
+   * expanded, so only the scroll and highlight are needed.
    */
   const handleOpenStageEvidence = useCallback((stage: { techniqueId: string }) => {
     if (highlightTimer.current !== null) window.clearTimeout(highlightTimer.current);
@@ -109,9 +116,9 @@ export function InvestigationResultView({
     }, 2400);
 
     document
-      .getElementById(EVIDENCE_SECTION_ID)
+      .getElementById(evidenceSectionId)
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
+  }, [evidenceSectionId]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -177,7 +184,7 @@ export function InvestigationResultView({
       {/* 06 — Evidence & Sources (always visible; scroll target for
           technique-name clicks) */}
       <Section
-        sectionId={EVIDENCE_SECTION_ID}
+        sectionId={evidenceSectionId}
         num="06"
         icon={<ClipboardList className="size-3.5 text-[var(--syntra-orange)]" aria-hidden="true" />}
         title="Evidence & Sources"
