@@ -68,16 +68,17 @@ function TechniqueCard({
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1200);
     void navigator.clipboard?.writeText(stage.techniqueId).then(() => {
       toast.success(`Copied ${stage.techniqueId}`, {
         description: "Technique ID copied to clipboard.",
       });
     }).catch(() => {
+      setCopied(false);
       toast.error("Copy failed", { description: "Clipboard access was denied." });
     });
     onCopyTechniqueId?.(stage.techniqueId);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
   };
 
   return (

@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { sendWelcomeNotification } from "@/services/notifications";
 import { SyntraLogo } from "@/components/Logo";
+import { validateInternalRoute } from "@/security/urlValidation";
 import {
   validateEmailCredential,
   validatePasswordCredential,
@@ -29,7 +30,9 @@ interface AuthProps {
 }
 
 function resolveRedirectAfterAuth(returnTo: string | null, fallback = "/investigate") {
-  if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) {
+  // Hardened: only allowlisted internal routes are accepted as redirect
+  // targets (the security layer also rejects scheme-relative "//...").
+  if (returnTo !== null && validateInternalRoute(returnTo).ok) {
     return returnTo;
   }
   return fallback;

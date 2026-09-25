@@ -1,5 +1,5 @@
 import { ExternalLink, FileText, FlaskConical, LinkIcon, ShieldQuestion, X } from "lucide-react";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useState } from "react";
 import { NeutralBadge, StatusBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
 import { validateExternalUrl, safeUrlLabel } from "@/security/urlValidation";
@@ -156,9 +156,4 @@ export function EvidenceList({ items, highlightRefId }: { items: Evidence[]; hig
       ))}
     </div>
   );
-}
-
-/** Convenience hook-like helper kept internal to evidence rendering. */
-export function useEvidenceCount(items: Evidence[]): number {
-  return useMemo(() => items.length, [items]);
 }

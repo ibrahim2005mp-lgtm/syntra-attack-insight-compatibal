@@ -66,6 +66,9 @@ export function InvestigationInput({
     }
     setLocalError(null);
     onSubmit(trimmed);
+    // Chat-style behavior: the composer clears once the question is sent.
+    // The question itself stays visible in the conversation above.
+    setValue("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
