@@ -101,7 +101,16 @@ export function LabEnvironmentOverview({
  * Section 8 — Controlled Attack Validation: the lab fact sheet plus the
  * guided launch action. Everything is descriptive; nothing executes here.
  */
-export function LabValidation({ lab, selectedPlatform }: { lab: LabEnvironment; selectedPlatform: LabPlatform }) {
+export function LabValidation({
+  lab,
+  selectedPlatform,
+  labSectionId,
+}: {
+  lab: LabEnvironment;
+  selectedPlatform: LabPlatform;
+  /** DOM id of THIS turn's IsolatedLab card — the launch button's scroll target. */
+  labSectionId: string;
+}) {
   const [launched, setLaunched] = useState(false);
 
   const facts: [string, string][] = [
@@ -180,7 +189,7 @@ export function LabValidation({ lab, selectedPlatform }: { lab: LabEnvironment; 
                   : `${lab.techniqueId} validation is running inside the isolated ${LAB_PLATFORM_LABEL[selectedPlatform]} environment.`,
               });
               window.setTimeout(() => {
-                const el = document.getElementById("syn-isolated-lab");
+                const el = document.getElementById(labSectionId);
                 el?.scrollIntoView({ behavior: "smooth", block: "start" });
               }, 60);
             }}
@@ -219,7 +228,16 @@ export function LabValidation({ lab, selectedPlatform }: { lab: LabEnvironment; 
  * console panel, the guided step list, and the safety notice. The session is
  * a guided walkthrough — no live execution happens in the browser.
  */
-export function IsolatedLab({ lab, selectedPlatform }: { lab: LabEnvironment; selectedPlatform: LabPlatform }) {
+export function IsolatedLab({
+  lab,
+  selectedPlatform,
+  id,
+}: {
+  lab: LabEnvironment;
+  selectedPlatform: LabPlatform;
+  /** Unique DOM id for this turn's lab card (scroll target for lab launch). */
+  id?: string;
+}) {
   const [currentStep, setCurrentStep] = useState(0);
   const [running, setRunning] = useState(false);
   const total = lab.sessionSteps.length;
@@ -237,7 +255,7 @@ export function IsolatedLab({ lab, selectedPlatform }: { lab: LabEnvironment; se
   };
 
   return (
-    <div className="syn-card overflow-hidden" id="syn-isolated-lab">
+    <div className="syn-card overflow-hidden" id={id}>
       {/* Header band */}
       <div className="border-b border-border bg-[var(--syntra-surface-soft)] px-4 py-4 text-center">
         <h3 className="text-base font-bold uppercase tracking-[0.08em] text-foreground">

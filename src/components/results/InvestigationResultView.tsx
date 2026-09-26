@@ -27,6 +27,9 @@ import type { InvestigationReport, LabPlatform } from "@/types/investigation";
  */
 const EVIDENCE_SECTION_ID_PREFIX = "syn-evidence-section";
 
+/** DOM id prefix for the Isolated Lab section — also unique per view instance. */
+const LAB_SECTION_ID_PREFIX = "syn-isolated-lab";
+
 function Section({
   num,
   icon,
@@ -98,6 +101,9 @@ export function InvestigationResultView({
 }) {
   /** Unique, per-turn DOM id for this view's Evidence & Sources section. */
   const evidenceSectionId = `${EVIDENCE_SECTION_ID_PREFIX}-${useId()}`;
+  /** Unique, per-turn DOM id for this view's Isolated Lab section, so the
+   *  launch button scrolls to this turn's lab — not an earlier message's. */
+  const labSectionId = `${LAB_SECTION_ID_PREFIX}-${useId()}`;
   /** Technique currently targeted by a name click — drives evidence highlight. */
   const [highlightedRefId, setHighlightedRefId] = useState<string | null>(null);
   const highlightTimer = useRef<number | null>(null);
@@ -227,7 +233,7 @@ export function InvestigationResultView({
       {report.lab && (
         <>
           <Section num="07" icon={<Cpu className="size-3.5 text-[var(--syntra-orange)]" aria-hidden="true" />} title="Controlled Attack Validation">
-            <LabValidation lab={report.lab} selectedPlatform={labPlatform ?? report.lab.platform} />
+            <LabValidation lab={report.lab} selectedPlatform={labPlatform ?? report.lab.platform} labSectionId={labSectionId} />
           </Section>
           <Section num="08" icon={<MonitorCog className="size-3.5 text-[var(--syntra-orange)]" aria-hidden="true" />} title="Isolated Lab Environment">
             <div className="flex flex-col gap-4">
@@ -236,7 +242,7 @@ export function InvestigationResultView({
                 selectedPlatform={labPlatform ?? report.lab.platform}
                 onSelectPlatform={setLabPlatform}
               />
-              <IsolatedLab lab={report.lab} selectedPlatform={labPlatform ?? report.lab.platform} />
+              <IsolatedLab lab={report.lab} selectedPlatform={labPlatform ?? report.lab.platform} id={labSectionId} />
             </div>
           </Section>
         </>
