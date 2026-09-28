@@ -69,12 +69,11 @@ export default function About() {
       <div className="mt-8 flex items-start gap-3 rounded-lg border border-dashed border-[color-mix(in_oklab,var(--syntra-amber)_45%,var(--syntra-border))] bg-[color-mix(in_oklab,var(--syntra-amber)_6%,transparent)] p-4">
         <Radar className="mt-0.5 size-4 shrink-0 text-[var(--syntra-amber)]" aria-hidden="true" />
         <p className="text-xs leading-relaxed text-foreground/85">
-          Disclaimer — SYNTRA is an educational research instrument, not an attack tool. All
-          techniques are described for defensive understanding, every lab is a guided
-          simulation inside an isolated sandbox, and no capability here connects to or
-          affects real systems. Running any technique against infrastructure you do not
-          own — or lack explicit written authorization to test — is illegal in most
-          jurisdictions and contrary to the purpose of this project.
+          Disclaimer — SYNTRA was built to help people understand attacks, not launch them.
+          Everything you see here plays out in a simulated sandbox: no lab touches real
+          systems, and the techniques are explained only so defenders can recognize and
+          stop them. Using any of this against machines or networks you don't own or
+          aren't authorized to test is illegal — and the opposite of what SYNTRA is for.
         </p>
       </div>
     </WorkspacePage>
