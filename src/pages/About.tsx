@@ -69,9 +69,12 @@ export default function About() {
       <div className="mt-8 flex items-start gap-3 rounded-lg border border-dashed border-[color-mix(in_oklab,var(--syntra-amber)_45%,var(--syntra-border))] bg-[color-mix(in_oklab,var(--syntra-amber)_6%,transparent)] p-4">
         <Radar className="mt-0.5 size-4 shrink-0 text-[var(--syntra-amber)]" aria-hidden="true" />
         <p className="text-xs leading-relaxed text-foreground/85">
-          SYNTRA's interface layer is a hardening layer only. Authentication, authorization,
-          rate limiting and server-side validation are enforced by the backend — the
-          frontend never claims to eliminate security risk on its own.
+          Disclaimer — SYNTRA is an educational research instrument, not an attack tool. All
+          techniques are described for defensive understanding, every lab is a guided
+          simulation inside an isolated sandbox, and no capability here connects to or
+          affects real systems. Running any technique against infrastructure you do not
+          own — or lack explicit written authorization to test — is illegal in most
+          jurisdictions and contrary to the purpose of this project.
         </p>
       </div>
     </WorkspacePage>
