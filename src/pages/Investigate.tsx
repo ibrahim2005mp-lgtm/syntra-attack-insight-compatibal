@@ -163,9 +163,8 @@ export default function Investigate({ locationState }: InvestigateProps) {
               Investigate what the evidence actually supports
             </h2>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-              Ask about a cybersecurity event, technique, campaign or vulnerability.
-              SYNTRA returns an evidence-grounded analysis — not speculation. Follow-up
-              questions continue the same conversation.
+              Ask about any cybersecurity event, technique or vulnerability — and get an
+              evidence-backed analysis you can follow up on.
             </p>
           </div>
           <div className="w-full">
