@@ -184,7 +184,11 @@ export function LabValidation({
         {lab.launchable === true ? (
           <button
             type="button"
-            className="syn-btn-primary mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--syntra-orange)] px-4 text-sm font-semibold tracking-wide text-[color-mix(in_oklab,var(--syntra-orange)_20%,black)]"
+            className={
+              launched
+                ? "syn-btn-primary mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--syntra-success)] px-4 text-sm font-semibold tracking-wide text-[color-mix(in_oklab,var(--syntra-success)_20%,black)]"
+                : "syn-btn-primary mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--syntra-orange)] px-4 text-sm font-semibold tracking-wide text-[color-mix(in_oklab,var(--syntra-orange)_20%,black)]"
+            }
             onClick={() => {
               setLaunched((v) => !v);
               toast(launched ? "Lab session ended" : "Lab session started", {
@@ -474,7 +478,7 @@ export function IsolatedLab({
                   </button>
                   <button
                     type="button"
-                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-[color-mix(in_oklab,var(--syntra-danger)_45%,transparent)] px-3 text-xs font-semibold text-[var(--syntra-danger)] transition-colors hover:bg-[color-mix(in_oklab,var(--syntra-danger)_10%,transparent)]"
+                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-[color-mix(in_oklab,var(--syntra-success)_45%,transparent)] px-3 text-xs font-semibold text-[var(--syntra-success)] transition-colors hover:bg-[color-mix(in_oklab,var(--syntra-success)_10%,transparent)]"
                     onClick={() => {
                       setSession("ended");
                       toast("Walkthrough ended", {
