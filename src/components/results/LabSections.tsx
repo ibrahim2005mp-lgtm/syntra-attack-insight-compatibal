@@ -1,4 +1,5 @@
 import {
+  CheckCircle2,
   Monitor,
   Play,
   ShieldCheck,
@@ -247,6 +248,8 @@ export function IsolatedLab({
   const total = lab.sessionSteps.length;
   /** The Results phase is reached only once the session is finished or ended. */
   const finished = session === "completed" || session === "ended";
+  /** Steps actually completed — all of them when finished, fewer when ended early. */
+  const doneCount = session === "completed" ? total : session === "ended" ? currentStep : 0;
   const activePhaseIndex = finished
     ? SESSION_PHASES.length - 1
     : phaseForStep(currentStep, total);
@@ -341,6 +344,70 @@ export function IsolatedLab({
               {lab.scenarioObjective}
             </p>
           </div>
+
+          {/* Results menu — fills the empty space under the Objective once the
+              session is finished, giving the Results phase visible content in
+              the left column. */}
+          {finished && (
+            <div
+              className={
+                session === "completed"
+                  ? "rounded-md border border-[color-mix(in_oklab,var(--syntra-success)_30%,transparent)] bg-[color-mix(in_oklab,var(--syntra-success)_7%,transparent)] p-3"
+                  : "rounded-md border border-[color-mix(in_oklab,var(--syntra-amber)_35%,transparent)] bg-[color-mix(in_oklab,var(--syntra-amber)_8%,transparent)] p-3"
+              }
+            >
+              <p
+                className={
+                  session === "completed"
+                    ? "flex items-center gap-2 text-xs font-semibold text-[var(--syntra-success)]"
+                    : "flex items-center gap-2 text-xs font-semibold text-[var(--syntra-amber)]"
+                }
+              >
+                {session === "completed" ? (
+                  <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                ) : (
+                  <TriangleAlert className="size-3.5" aria-hidden="true" />
+                )}
+                Validation Results
+              </p>
+              <dl className="mt-2.5 flex flex-col gap-1.5">
+                {(
+                  [
+                    ["Session Outcome", session === "completed" ? "Completed ✓" : "Closed early"],
+                    ["Steps Completed", `${doneCount} / ${total}`],
+                    [
+                      "Expected Behavior",
+                      session === "completed"
+                        ? `Observed and matched — ${lab.techniqueId}`
+                        : "Not observed — session closed before completion",
+                    ],
+                    ["Live Execution", "None — guided walkthrough"],
+                    ["Runtime Used", LAB_PLATFORM_LABEL[selectedPlatform]],
+                  ] as [string, string][]
+                ).map(([label, value]) => (
+                  <div key={label} className="grid grid-cols-[minmax(120px,auto)_1fr] gap-3">
+                    <dt className="text-xs font-semibold text-foreground">{label}:</dt>
+                    <dd
+                      className={
+                        label === "Session Outcome"
+                          ? session === "completed"
+                            ? "min-w-0 text-xs text-[var(--syntra-success)]"
+                            : "min-w-0 text-xs text-[var(--syntra-amber)]"
+                          : "min-w-0 text-xs text-muted-foreground"
+                      }
+                    >
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              {session === "ended" && (
+                <p className="mt-2.5 border-t border-[color-mix(in_oklab,var(--syntra-amber)_25%,transparent)] pt-2 text-[11px] leading-relaxed text-muted-foreground">
+                  Restart the session to complete all steps and produce a validation result.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Guided steps + safety */}
