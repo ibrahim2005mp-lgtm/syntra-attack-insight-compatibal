@@ -19,6 +19,9 @@ const PLATFORM_ICON: Record<LabPlatform, typeof Monitor> = {
 
 const SESSION_PHASES = ["Environment", "Lab Guide", "Execute", "Observe", "Results"] as const;
 
+/** Lifecycle of a guided lab session inside one IsolatedLab view. */
+type LabSessionState = "ready" | "running" | "completed" | "ended";
+
 /** Which guided step maps to which phase marker on the stepper. */
 function phaseForStep(stepIndex: number, total: number): number {
   if (total === 0) return 0;
@@ -239,17 +242,22 @@ export function IsolatedLab({
   id?: string;
 }) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [running, setRunning] = useState(false);
+  const [session, setSession] = useState<LabSessionState>("ready");
+  const running = session === "running";
   const total = lab.sessionSteps.length;
-  const activePhase = SESSION_PHASES[phaseForStep(currentStep, total)];
+  /** The Results phase is reached only once the session is finished or ended. */
+  const finished = session === "completed" || session === "ended";
+  const activePhaseIndex = finished
+    ? SESSION_PHASES.length - 1
+    : phaseForStep(currentStep, total);
 
   const advance = () => {
     if (currentStep < total - 1) {
       setCurrentStep((s) => s + 1);
     } else {
-      setRunning(false);
+      setSession("completed");
       toast.success("Walkthrough complete", {
-        description: `${lab.techniqueId} guided steps finished — no live environment was attached.`,
+        description: `${lab.techniqueId} guided steps finished — the validation result is shown below. No live environment was attached.`,
       });
     }
   };
@@ -269,8 +277,8 @@ export function IsolatedLab({
       {/* Phase stepper */}
       <ol className="flex items-start justify-between gap-1 border-b border-border px-4 py-3" aria-label="Lab phases">
         {SESSION_PHASES.map((phase, i) => {
-          const active = SESSION_PHASES.indexOf(activePhase as (typeof SESSION_PHASES)[number]) === i;
-          const done = SESSION_PHASES.indexOf(activePhase as (typeof SESSION_PHASES)[number]) > i;
+          const active = activePhaseIndex === i;
+          const done = activePhaseIndex > i;
           return (
             <li key={phase} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
               <span
@@ -315,7 +323,7 @@ export function IsolatedLab({
                   ["Environment", selectedPlatform === "android" ? "Android Emulator" : lab.runtimeEnvironment],
                   ["Operating System", selectedPlatform === "windows" ? "Windows 10" : selectedPlatform === "linux" ? "Ubuntu LTS" : "Android"],
                   ["Network Mode", lab.networkMode],
-                  ["Status", running ? "Connected" : "Ready"],
+                  ["Status", session === "running" ? "Connected" : session === "completed" ? "Completed" : session === "ended" ? "Closed" : "Ready"],
                   ["Estimated Duration", lab.estimatedDuration],
                   ["Difficulty", lab.difficulty],
                 ] as [string, string][]
@@ -345,7 +353,7 @@ export function IsolatedLab({
             <ol className="mt-2.5 flex flex-col gap-2">
               {lab.sessionSteps.map((step, i) => {
                 const active = running && i === currentStep;
-                const done = running && i < currentStep;
+                const done = session === "completed" || (session === "ended" && i < currentStep);
                 return (
                   <li key={`${lab.id}-step-${i}`} className="flex items-start gap-2.5">
                     <span
@@ -378,7 +386,7 @@ export function IsolatedLab({
                   type="button"
                   className="syn-btn-primary inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md bg-[var(--syntra-orange)] px-3 text-xs font-semibold tracking-wide text-[color-mix(in_oklab,var(--syntra-orange)_20%,black)]"
                   onClick={() => {
-                    setRunning(true);
+                    setSession("running");
                     setCurrentStep(0);
                     toast("Guided session started", {
                       description: "Follow the walkthrough steps for this technique.",
@@ -386,7 +394,7 @@ export function IsolatedLab({
                   }}
                 >
                   <Play className="size-3.5" aria-hidden="true" />
-                  START LAB SESSION
+                  {session === "ready" ? "START LAB SESSION" : "RESTART LAB SESSION"}
                 </button>
               ) : (
                 <>
@@ -401,9 +409,9 @@ export function IsolatedLab({
                     type="button"
                     className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-[color-mix(in_oklab,var(--syntra-danger)_45%,transparent)] px-3 text-xs font-semibold text-[var(--syntra-danger)] transition-colors hover:bg-[color-mix(in_oklab,var(--syntra-danger)_10%,transparent)]"
                     onClick={() => {
-                      setRunning(false);
+                      setSession("ended");
                       toast("Walkthrough ended", {
-                        description: "The guided session was closed. No live environment was attached.",
+                        description: "The guided session was closed — the result summary is shown below. No live environment was attached.",
                       });
                     }}
                   >
@@ -448,6 +456,53 @@ export function IsolatedLab({
           </div>
         </div>
       </div>
+
+      {/* Validation result — shown once the guided session is finished or
+          ended, so the stepper's Results phase always has visible content. */}
+      {finished && (
+        <div className="border-t border-border p-4">
+          {session === "completed" ? (
+            <div className="rounded-md border border-[color-mix(in_oklab,var(--syntra-success)_30%,transparent)] bg-[color-mix(in_oklab,var(--syntra-success)_7%,transparent)] p-3">
+              <p className="flex items-center gap-2 text-xs font-semibold text-[var(--syntra-success)]">
+                <ShieldCheck className="size-3.5" aria-hidden="true" />
+                Validation Result — Complete
+              </p>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+                All {total} guided steps for {lab.techniqueId} were completed inside the
+                isolated {LAB_PLATFORM_LABEL[selectedPlatform]} environment. The expected
+                behavior was observed and matched the lab objective. No live environment
+                was attached and nothing executed outside the sandbox.
+              </p>
+              <dl className="mt-2.5 flex flex-wrap gap-x-6 gap-y-1 text-[10px]">
+                <div className="flex gap-1.5">
+                  <dt className="text-muted-foreground">Steps Completed:</dt>
+                  <dd className="syn-mono font-semibold text-foreground">{total}/{total}</dd>
+                </div>
+                <div className="flex gap-1.5">
+                  <dt className="text-muted-foreground">Outcome:</dt>
+                  <dd className="syn-mono font-semibold text-[var(--syntra-success)]">Expected behavior confirmed</dd>
+                </div>
+                <div className="flex gap-1.5">
+                  <dt className="text-muted-foreground">Live Execution:</dt>
+                  <dd className="syn-mono font-semibold text-foreground">None — guided walkthrough</dd>
+                </div>
+              </dl>
+            </div>
+          ) : (
+            <div className="rounded-md border border-[color-mix(in_oklab,var(--syntra-amber)_35%,transparent)] bg-[color-mix(in_oklab,var(--syntra-amber)_8%,transparent)] p-3">
+              <p className="flex items-center gap-2 text-xs font-semibold text-[var(--syntra-amber)]">
+                <TriangleAlert className="size-3.5" aria-hidden="true" />
+                Session Closed — No Validation Result
+              </p>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+                The guided session was closed after {currentStep} of {total} steps. No
+                validation result was produced — restart the session to complete all
+                steps and view the result.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
